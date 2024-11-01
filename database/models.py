@@ -16,6 +16,7 @@ class UsersBot(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     id_tg = Column(BigInteger, nullable=False)
     ls = Column(Integer)
+    home = Column(Integer)
     kv = Column(Integer)
     created_at = Column(TIMESTAMP, server_default=func.current_timestamp())
     is_active = Column(Boolean, default=True)

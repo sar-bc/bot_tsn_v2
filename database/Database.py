@@ -1,4 +1,4 @@
-from sqlalchemy import select, delete
+from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from database.models import *
 import os
@@ -43,8 +43,13 @@ class DataBase:
 
     async def get_userbot(self, tg: int):
         async with self.Session() as session:
-            result = await session.scalars(select(UsersBot).where(UsersBot.id_tg == tg))
-            return result
+            result = await session.execute(select(UsersBot).where(UsersBot.id_tg == tg))
+            return result.scalars()
+
+    async def get_userbot_ls(self, ls: int):
+        async with self.Session() as session:
+            result = await session.execute(select(UsersBot).where(UsersBot.ls == ls))
+            return result.scalar()
 
     async def update_state(self, state: UserState):
         async with self.Session() as session:
@@ -74,3 +79,20 @@ class DataBase:
                 except Exception as e:
                     logger.error(f"Ошибка при удалении сообщения: {e}")
             state.last_message_ids.clear()
+
+    async def get_users(self, ls: int, kv: int):
+        async with self.Session() as session:
+            result = await session.execute(select(Users).where(and_(Users.ls == ls, Users.kv == kv)))
+            return result.scalar()
+
+    async def create_userbot(self, **kwargs):
+        logger.info(f"Запись в бд id_tg:{kwargs['id_tg']};ls:{kwargs['ls']};home:{kwargs['home']};kv:{kwargs['kv']}")
+        async with self.Session() as session:
+            try:
+                session.add(UsersBot(**kwargs))
+                await session.commit()
+                return True
+            except Exception as e:
+                await session.rollback()  # Откатить изменения в случае ошибки
+                logger.error(f"Ошибка при добавлении: {e}")
+                return False

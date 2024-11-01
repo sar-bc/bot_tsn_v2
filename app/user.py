@@ -76,6 +76,13 @@ async def add_ls(callback: CallbackQuery, state: FSMContext):
     await callback.message.answer('Введите номер лицевого счета (только цифры, не более 8 цифр).')
 
 
+@user.callback_query(F.data.startswith('show_ls:'))
+async def show_ls(callback: CallbackQuery):
+    ls = callback.data.split(':')[1]
+    logger.info(f'show_ls:{ls}')
+
+
+
 #  ####### FUNCTION ###################
 async def all_ls(state, message):
     logger.info(f'all_ls:user_id={state.user_id}')
@@ -89,5 +96,31 @@ async def all_ls(state, message):
 
 # ############
 async def check_ls(message: Message, data: Dict[str, Any]):
-    logger.info(f'check_ls_data:{data}')
-    await message.answer('Ищем лицевой и квартиру')
+    db = DataBase()
+    logger.info(f"check_ls:{data['ls']};kv:{data['kv']}")
+    u = await db.get_users(data['ls'], data['kv'])
+    if u:
+        logger.info('такой юзер есть')
+        logger.info(u)
+        if await db.get_userbot_ls(u.ls):
+            await message.answer(f"⛔ Лицевой счет уже добавлен!")
+        else:
+            # await db.create_userbot(id_tg=message.from_user.id, ls=u.ls, home=u.home, kv=u.kv)
+            kwargs = {
+                'id_tg': message.from_user.id,
+                'ls': u.ls,
+                'home': u.home,
+                'kv': u.kv
+            }
+            if await db.create_userbot(**kwargs):
+                await message.answer(f"Лицевой счет №{u.ls} успешно добавлен.")
+                user_state = await db.get_state(message.from_user.id)
+                await all_ls(user_state, message)
+            else:
+                await message.answer('❌ Не удалось добавить лицевой счет! Обратитесь в офис ТСН')
+
+    else:
+        logger.error('такого юзере НЕТ')
+        await message.answer('❌ Не удалось найти указанный лицевой счет! Обратитесь в офис ТСН')
+        user_state = await db.get_state(message.from_user.id)
+        await all_ls(user_state, message)
