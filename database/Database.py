@@ -98,4 +98,12 @@ class DataBase:
                 return False
 
     async def get_ipu(self, ls: int):
-        ...
+        logger.info(f"Получить по лицевому №{ls} список счетчиков")
+        async with self.Session() as session:
+            meter_result = await session.execute(select(MeterDev).where(MeterDev.ls == ls))
+            return meter_result.scalars().all()
+
+    async def get_address(self, ls: int):
+        async with self.Session() as session:
+            result = await session.execute(select(Users).where(Users.ls == ls))
+            return result.scalar()

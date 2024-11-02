@@ -82,9 +82,31 @@ async def show_ls(callback: CallbackQuery):
     user_state = await db.get_state(callback.from_user.id)
     await db.delete_messages(user_state, callback.message)
     await callback.answer()
-    ls = callback.data.split(':')[1]
+    ls = int(callback.data.split(':')[1])
     logger.info(f'callback_show_ls:{ls}')
     await callback.message.answer("Получение списка счётчиков... ожидайте.")
+    ipu = await db.get_ipu(ls)
+    if not ipu:
+        await callback.message.answer(f"На лицевом счете №{ls} не найдены приборы учета!")
+    users = await db.get_address(ls)
+    user_state = await db.get_state(callback.from_user.id)
+    sent_mess = await callback.message.answer(f"Лицевой счет № {ls}\n"
+                                  f"Адрес: {users.address}\n", reply_markup=await kb.inline_show_ipu(ls))
+    user_state.last_message_ids.append(sent_mess.message_id)
+    await db.update_state(user_state)
+
+
+@user.callback_query(F.data == 'all_ls_call')
+async def all_ls_call(callback: CallbackQuery):
+    db = DataBase()
+    user_bot = await db.get_userbot(callback.from_user.id)
+    user_state = await db.get_state(callback.from_user.id)
+    await db.delete_messages(user_state, callback)
+    logger.info(f'all_ls_call:user_id={callback.from_user.id}')
+    sent_mess = await callback.message.answer('Выберите Лицевой счёт из списка, либо добавьте новый',
+                                              reply_markup=await kb.inline_ls(user_bot))
+    user_state.last_message_ids.append(sent_mess.message_id)
+    await db.update_state(user_state)
 
 
 #  ####### FUNCTION ###################

@@ -1,7 +1,7 @@
 from sqlalchemy import (ForeignKey, String, BigInteger,
                         TIMESTAMP, Column, func, Integer,
                         Text, CheckConstraint, Date, Boolean, JSON)
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.orm import DeclarativeBase, relationship
 from sqlalchemy.ext.asyncio import AsyncAttrs
 
 
@@ -28,40 +28,40 @@ class UsersBot(Base):
 
 ####################################
 class Users(Base):
-    __tablename__ = 'Users'
+    __tablename__ = 'Users'  # Исправлено на __tablename__
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    ls = Column(Integer, nullable=False)
+    ls = Column(Integer, nullable=False, unique=True)
     home = Column(Integer, nullable=False)
     kv = Column(Integer, nullable=False)
     address = Column(Text)
+    meters = relationship('MeterDev', back_populates='user')
 
-    def __repr__(self):
+    def __repr__(self):  # Исправлено на __repr__
         return f"<Users(id={self.id}, ls={self.ls}, home={self.home}, kv={self.kv}, address='{self.address}')>"
-
 
 ####################################
 class MeterDev(Base):
-    __tablename__ = 'MeterDev'
+    __tablename__ = 'MeterDev'  # Исправлено на __tablename__
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    ls = Column(Integer, nullable=False)
+    ls = Column(Integer, ForeignKey('Users.ls'), nullable=False)
     name = Column(String(250), nullable=True)
     number = Column(String(100), unique=True, nullable=True)
     data_pov_next = Column(Date, nullable=True)
     location = Column(String(50), nullable=True)
-    # Используем CheckConstraint отдельно
     type = Column(String(3), default='hv', nullable=False)
 
     __table_args__ = (
         CheckConstraint("type IN ('hv', 'gv', 'e')", name="check_type"),
     )
+    # Связь с пользователем
+    user = relationship('Users', back_populates='meters')
 
-    def __repr__(self):
+    def __repr__(self):  # Определение метода __repr__
         return (f"<MeterDev(id={self.id}, ls={self.ls}, name='{self.name}', "
                 f"number='{self.number}', data_pov_next='{self.data_pov_next}', "
                 f"type='{self.type}')>")
-
 
 ####################################
 class Pokazaniya(Base):
