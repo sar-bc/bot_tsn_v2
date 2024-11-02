@@ -5,7 +5,7 @@ from app.middlewares import CounterMiddleware
 import app.keyboards as kb
 import logging
 from aiogram.fsm.context import FSMContext
-from app.states import AddLs
+from app.states import AddLs, AddPokazaniya
 from typing import Any, Dict
 from database.Database import DataBase
 
@@ -25,7 +25,7 @@ async def cmd_start(message: Message):
     logger.info('Команда старт')
     db = DataBase()
     user_state = await db.get_state(message.from_user.id)
-    await db.delete_messages(user_state, message)
+    await db.delete_messages(user_state)
     await message.answer('Добро пожаловать !')
     await all_ls(user_state, message)
 
@@ -65,22 +65,28 @@ async def process_kv(message: Message, state: FSMContext):
         await message.answer("Вы ввели некорректное значение! Введите номер квартиры еще раз")
 
 
+@user.message(AddPokazaniya.input)
+async def priem_pokaz(mesage: Message, state: FSMContext):
+    logger.info(f"Прием показаний")
+
+
 #  # Callback ###
 @user.callback_query(F.data == 'add_ls')
 async def add_ls(callback: CallbackQuery, state: FSMContext):
     await state.set_state(AddLs.ls)
     db = DataBase()
     user_state = await db.get_state(callback.from_user.id)
-    await db.delete_messages(user_state, callback.message)
+    await db.delete_messages(user_state)
     await callback.answer()
     await callback.message.answer('Введите номер лицевого счета (только цифры, не более 8 цифр).')
 
 
 @user.callback_query(F.data.startswith('show_ls:'))
-async def show_ls(callback: CallbackQuery):
+async def show_ls(callback: CallbackQuery, state: FSMContext):
+    await state.clear()
     db = DataBase()
     user_state = await db.get_state(callback.from_user.id)
-    await db.delete_messages(user_state, callback.message)
+    await db.delete_messages(user_state)
     await callback.answer()
     ls = int(callback.data.split(':')[1])
     logger.info(f'callback_show_ls:{ls}')
@@ -91,7 +97,9 @@ async def show_ls(callback: CallbackQuery):
     users = await db.get_address(ls)
     user_state = await db.get_state(callback.from_user.id)
     sent_mess = await callback.message.answer(f"Лицевой счет № {ls}\n"
-                                  f"Адрес: {users.address}\n", reply_markup=await kb.inline_show_ipu(ls))
+                                              f"Адрес: {users.address}\n"
+                                              f"Выберите прибор учета из списка",
+                                              reply_markup=await kb.inline_show_ipu(ls, ipu))
     user_state.last_message_ids.append(sent_mess.message_id)
     await db.update_state(user_state)
 
@@ -101,10 +109,70 @@ async def all_ls_call(callback: CallbackQuery):
     db = DataBase()
     user_bot = await db.get_userbot(callback.from_user.id)
     user_state = await db.get_state(callback.from_user.id)
-    await db.delete_messages(user_state, callback)
+    await db.delete_messages(user_state)
     logger.info(f'all_ls_call:user_id={callback.from_user.id}')
-    sent_mess = await callback.message.answer('Выберите Лицевой счёт из списка, либо добавьте новый',
+    sent_mess = await callback.message.answer(text='Выберите Лицевой счёт из списка, либо добавьте новый',
                                               reply_markup=await kb.inline_ls(user_bot))
+    user_state.last_message_ids.append(sent_mess.message_id)
+    await db.update_state(user_state)
+
+
+@user.callback_query(F.data.startswith('del_ls:'))
+async def del_ls(callback: CallbackQuery):
+    ls = int(callback.data.split(':')[1])
+    db = DataBase()
+    users = await db.get_user_ls(ls)
+    user_state = await db.get_state(callback.from_user.id)
+    await db.delete_messages(user_state)
+    logger.info(f"Поступил запрос на удаление лицевого {ls}")
+    sent_mess = await callback.message.answer(f"Вы точно хотите отвязать Лицевой счет?\n"
+                                              f"Счет № {ls}\n"
+                                              f"Адрес: {users.address}", reply_markup=await kb.inline_del_ls(ls))
+    user_state.last_message_ids.append(sent_mess.message_id)
+    await db.update_state(user_state)
+
+
+@user.callback_query(F.data.startswith('del_ls_yes:'))
+async def del_ls(callback: CallbackQuery):
+    ls = int(callback.data.split(':')[1])
+    id_tg = callback.from_user.id
+    db = DataBase()
+    user_state = await db.get_state(callback.from_user.id)
+    if await db.del_ls(id_tg, ls):
+        await callback.message.answer(f'Лицевой счет №{ls} успешно отвязан!')
+    await db.delete_messages(user_state)
+    await all_ls(user_state, callback.message)
+
+
+@user.callback_query(F.data.startswith('add_pokazaniya:'))
+async def add_pokazaniya(callback: CallbackQuery, state: FSMContext):
+    db = DataBase()
+    user_state = await db.get_state(callback.from_user.id)
+    await db.delete_messages(user_state)
+    ls = int(callback.data.split(':')[1])
+    type_ipu = callback.data.split(':')[2]
+    type_mapping = {
+        'hv': 'ХВС',
+        'gv': 'ГВС',
+        'e': 'Электрич.'
+    }
+    last = await db.get_pokazaniya_last(ls, type_ipu)
+    print(last)
+    data_display = last.date.strftime("(%d-%m-%Y)") if last is not None else ' '
+    previous_value = getattr(last, type_ipu) if last is not None else ' '
+
+    display_type = type_mapping.get(type_ipu, type_ipu)
+    previous_display = (
+        f"Предыдущее: {previous_value} {data_display}\n"
+        if last is not None else ''
+    )
+    sent_mess = await callback.message.answer(
+        f"Прибор учета: {display_type}\n"
+        f"{previous_display}"
+        f"Введите текущее показание ниже:",
+        reply_markup=await kb.inline_back(ls)
+    )
+    await state.set_state(AddPokazaniya.input)
     user_state.last_message_ids.append(sent_mess.message_id)
     await db.update_state(user_state)
 
@@ -114,7 +182,7 @@ async def all_ls(state, message):
     logger.info(f'all_ls:user_id={state.user_id}')
     db = DataBase()
     user_bot = await db.get_userbot(state.user_id)
-    sent_mess = await message.answer('Выберите Лицевой счёт из списка, либо добавьте новый',
+    sent_mess = await message.answer(text='Выберите Лицевой счёт из списка, либо добавьте новый',
                                      reply_markup=await kb.inline_ls(user_bot))
     state.last_message_ids.append(sent_mess.message_id)
     await db.update_state(state)

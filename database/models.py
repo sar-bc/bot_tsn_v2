@@ -46,10 +46,10 @@ class MeterDev(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     ls = Column(Integer, ForeignKey('Users.ls'), nullable=False)
-    name = Column(String(250), nullable=True)
-    number = Column(String(100), unique=True, nullable=True)
+    name = Column(String(250), nullable=True, default='')
+    number = Column(String(100), unique=True, nullable=True, default='')
     data_pov_next = Column(Date, nullable=True)
-    location = Column(String(50), nullable=True)
+    location = Column(String(50), nullable=True, default='')
     type = Column(String(3), default='hv', nullable=False)
 
     __table_args__ = (

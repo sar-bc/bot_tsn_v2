@@ -1,4 +1,4 @@
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, delete
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from database.models import *
 import os
@@ -70,7 +70,7 @@ class DataBase:
             else:
                 return None  # Состояние не найдено
 
-    async def delete_messages(self, state, message):
+    async def delete_messages(self, state):
         if state.last_message_ids:
             from main import bot
             for lst in state.last_message_ids:
@@ -83,6 +83,11 @@ class DataBase:
     async def get_users(self, ls: int, kv: int):
         async with self.Session() as session:
             result = await session.execute(select(Users).where(and_(Users.ls == ls, Users.kv == kv)))
+            return result.scalar()
+
+    async def get_user_ls(self, ls: int):
+        async with self.Session() as session:
+            result = await session.execute(select(Users).where(Users.ls == ls))
             return result.scalar()
 
     async def create_userbot(self, **kwargs):
@@ -107,3 +112,18 @@ class DataBase:
         async with self.Session() as session:
             result = await session.execute(select(Users).where(Users.ls == ls))
             return result.scalar()
+
+    async def del_ls(self, id_tg: int, ls: int):
+        async with self.Session() as session:
+            result = await session.execute(delete(UsersBot).where(and_(UsersBot.id_tg == id_tg), (UsersBot.ls == ls)))
+            await session.commit()
+            # Проверяем количество удаленных строк
+            return result.rowcount > 0
+
+    async def get_pokazaniya_last(self, ls, type_ipu):
+        async with self.Session() as session:
+            result = await session.execute(
+                select(Pokazaniya).where(Pokazaniya.ls == ls, getattr(Pokazaniya, type_ipu).isnot(None)).order_by(
+                    Pokazaniya.date.desc())
+            )
+            return result.scalars().first()

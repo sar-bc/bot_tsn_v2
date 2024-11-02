@@ -6,3 +6,6 @@ class AddLs(StatesGroup):
     ls = State()
     kv = State()
 
+
+class AddPokazaniya(StatesGroup):
+    input = State()
