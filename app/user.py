@@ -65,11 +65,6 @@ async def process_kv(message: Message, state: FSMContext):
         await message.answer("Вы ввели некорректное значение! Введите номер квартиры еще раз")
 
 
-@user.message(AddPokazaniya.input)
-async def priem_pokaz(mesage: Message, state: FSMContext):
-    logger.info(f"Прием показаний")
-
-
 #  # Callback ###
 @user.callback_query(F.data == 'add_ls')
 async def add_ls(callback: CallbackQuery, state: FSMContext):
@@ -172,9 +167,28 @@ async def add_pokazaniya(callback: CallbackQuery, state: FSMContext):
         f"Введите текущее показание ниже:",
         reply_markup=await kb.inline_back(ls)
     )
-    await state.set_state(AddPokazaniya.input)
+    # Использование словаря для сопоставления типов и состояний
+    state_mapping = {
+        'hv': AddPokazaniya.hv,
+        'gv': AddPokazaniya.gv,
+        'e': AddPokazaniya.e  # Добавьте другие типы, если необходимо
+    }
+    # Устанавливаем состояние на основе словаря
+    await state.set_state(state_mapping.get(type_ipu, None))  # None, если тип не найден
+
     user_state.last_message_ids.append(sent_mess.message_id)
     await db.update_state(user_state)
+
+
+@user.message(AddPokazaniya.hv)
+async def priem_pokaz(message: Message, state: FSMContext):
+    db = DataBase()
+    user_state = await db.get_state(message.from_user.id)
+    await db.delete_messages(user_state)
+    logger.info(f"Прием показаний ХВС")
+    data = await state.update_data(hv=int(message.text))
+    await state.clear()
+    await message.answer(f"Введено показание: {data['hv']}... ожидайте")
 
 
 #  ####### FUNCTION ###################

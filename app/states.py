@@ -9,3 +9,6 @@ class AddLs(StatesGroup):
 
 class AddPokazaniya(StatesGroup):
     input = State()
+    hv = State()
+    gv = State()
+    e = State()
