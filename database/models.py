@@ -46,14 +46,10 @@ class MeterDev(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     ls = Column(Integer, nullable=False)
-    name = Column(String(250), nullable=False)
-    number = Column(String(100), unique=True, nullable=False)
-    data_pov_next = Column(Date, nullable=False)
-    plomba = Column(String(100))
-    amg = Column(String(100))
-    pokazaniya = Column(String(100))
-    date_akt = Column(Date)
-
+    name = Column(String(250), nullable=True)
+    number = Column(String(100), unique=True, nullable=True)
+    data_pov_next = Column(Date, nullable=True)
+    location = Column(String(50), nullable=True)
     # Используем CheckConstraint отдельно
     type = Column(String(3), default='hv', nullable=False)
 

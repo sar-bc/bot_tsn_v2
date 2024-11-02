@@ -96,3 +96,6 @@ class DataBase:
                 await session.rollback()  # Откатить изменения в случае ошибки
                 logger.error(f"Ошибка при добавлении: {e}")
                 return False
+
+    async def get_ipu(self, ls: int):
+        ...

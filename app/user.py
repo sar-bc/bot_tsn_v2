@@ -78,9 +78,13 @@ async def add_ls(callback: CallbackQuery, state: FSMContext):
 
 @user.callback_query(F.data.startswith('show_ls:'))
 async def show_ls(callback: CallbackQuery):
+    db = DataBase()
+    user_state = await db.get_state(callback.from_user.id)
+    await db.delete_messages(user_state, callback.message)
+    await callback.answer()
     ls = callback.data.split(':')[1]
-    logger.info(f'show_ls:{ls}')
-
+    logger.info(f'callback_show_ls:{ls}')
+    await callback.message.answer("Получение списка счётчиков... ожидайте.")
 
 
 #  ####### FUNCTION ###################
