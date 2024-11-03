@@ -10,11 +10,13 @@ class AddLs(StatesGroup):
 class AddPokazaniya(StatesGroup):
     input = State()
     ls = State()
+    kv = State()
     type_ipu = State()
     last_input = State()
-    hv = State()
-    gv = State()
-    e = State()
+    callback = State()
+    # hv = State()
+    # gv = State()
+    # e = State()
 
     # last_hv = State()
     # last_gv = State()

@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from database.models import *
 import os
 import logging
+from datetime import date
 
 # Настройка логирования
 logging.basicConfig(
@@ -139,3 +140,48 @@ class DataBase:
                     Pokazaniya.date.desc())
             )
             return result.scalars().first()
+
+    async def add_or_update_pokazaniya(self, ls: int, kv: int, type_ipu: str, value: str):
+        # Получаем текущую дату
+        current_date = date.today()
+
+        async with self.Session() as session:
+            # Проверяем, существует ли запись с такими же ls, kv и текущей датой
+            result = await session.execute(
+                select(Pokazaniya).where(
+                    Pokazaniya.ls == ls,
+                    Pokazaniya.kv == kv,
+                    Pokazaniya.date == current_date
+                )
+            )
+
+            existing_record = result.scalars().first()  # Получаем первую подходящую запись
+
+            if existing_record:
+                # Если запись существует, обновляем соответствующее поле в зависимости от type_ipu
+                logger.info(f"Обновляем запись: {existing_record}")
+                if type_ipu == 'hv':
+                    existing_record.hv = value
+                elif type_ipu == 'gv':
+                    existing_record.gv = value
+                elif type_ipu == 'e':
+                    existing_record.e = value
+
+                await session.commit()  # Сохраняем изменения
+                logger.info("Запись обновлена.")
+            else:
+                # Если записи нет, создаем новую
+                new_record = Pokazaniya(ls=ls, kv=kv, date=current_date)
+                logger.info("Создаем новую запись с показаниями")
+
+                # Устанавливаем значение поля в зависимости от type_ipu
+                if type_ipu == 'hv':
+                    new_record.hv = value
+                elif type_ipu == 'gv':
+                    new_record.gv = value
+                elif type_ipu == 'e':
+                    new_record.e = value
+
+                session.add(new_record)  # Добавляем новую запись в сессию
+                await session.commit()  # Сохраняем новую запись
+                logger.info("Новая запись сохранена.")

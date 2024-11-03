@@ -8,6 +8,7 @@ from aiogram.fsm.context import FSMContext
 from app.states import AddLs, AddPokazaniya
 from typing import Any, Dict
 from database.Database import DataBase
+from datetime import date
 
 # Настройка логирования
 logging.basicConfig(
@@ -18,6 +19,12 @@ logger = logging.getLogger(__name__)
 user = Router()
 
 user.message.middleware(CounterMiddleware())
+
+type_mapping = {
+    'hv': 'ХВС',
+    'gv': 'ГВС',
+    'e': 'ЭЛ-ВО'
+}
 
 
 @user.message(CommandStart())
@@ -141,24 +148,22 @@ async def del_ls(callback: CallbackQuery):
 
 @user.callback_query(F.data.startswith('add_pokazaniya:'))
 async def add_pokazaniya(callback: CallbackQuery, state: FSMContext):
+    # Получаем текущую дату
+    current_date = date.today()
+
     db = DataBase()
     user_state = await db.get_state(callback.from_user.id)
     await db.delete_messages(user_state)
     ls = int(callback.data.split(':')[1])
     type_ipu = callback.data.split(':')[2]
-    type_mapping = {
-        'hv': 'ХВС',
-        'gv': 'ГВС',
-        'e': 'ЭЛ-ВО'
-    }
     last = await db.get_pokazaniya_last(ls, type_ipu)
     logger.info(f"ID_TG:{callback.from_user.id}|get_pokazaniya_last:{last}")
     data_display = last.date.strftime("(%d-%m-%Y)") if last is not None else ' '
     previous_value = getattr(last, type_ipu) if last is not None else ' '
-
+    address = await db.get_address(ls)
     display_type = type_mapping.get(type_ipu, type_ipu)
     previous_display = (
-        f"Предыдущее: {previous_value} {data_display}\n"
+        f"Предыдущее: {previous_value}  {'🆕' if last.date == current_date else ''}{data_display}\n"
         if last is not None else ''
     )
     sent_mess = await callback.message.answer(
@@ -167,44 +172,54 @@ async def add_pokazaniya(callback: CallbackQuery, state: FSMContext):
         f"Введите текущее показание ниже:",
         reply_markup=await kb.inline_back(ls)
     )
-    # Использование словаря для сопоставления типов и состояний
-    state_mapping = {
-        'hv': AddPokazaniya.hv,
-        'gv': AddPokazaniya.gv,
-        'e': AddPokazaniya.e  # Добавьте другие типы, если необходимо
-    }
-    # Устанавливаем состояние на основе словаря
-    await state.set_state(state_mapping.get(type_ipu, None))  # None, если тип не найден
+
+    await state.set_state(AddPokazaniya.input)
+    await state.update_data(kv=address.kv)
     await state.update_data(ls=ls)
     await state.update_data(type_ipu=type_ipu)
     await state.update_data(last_input=previous_value)
+    # await state.update_data(callback=callback)
     user_state.last_message_ids.append(sent_mess.message_id)
     await db.update_state(user_state)
 
 
-@user.message(AddPokazaniya.hv)
+@user.message(AddPokazaniya.input)
 async def priem_pokaz(message: Message, state: FSMContext):
     db = DataBase()
     user_state = await db.get_state(message.from_user.id)
+    await db.delete_messages(user_state)
     data = await state.get_data()
+    # call = data.get('callback')
     # await state.clear()
+    display_type = type_mapping.get(data.get('type_ipu'), data.get('type_ipu'))
     await db.delete_messages(user_state)
     input_cur = message.text
     logger.info(f"ID_TG:{message.from_user.id}|data:{data}")
-    await message.answer(f"Введено показание: {input_cur}... ожидайте")
+    await message.answer(f"Введено показание {display_type}: {input_cur}... ожидайте")
     if input_cur.isdigit() and 1 <= len(input_cur) <= 8:
-        logger.info(f"ID_TG:{message.from_user.id}|Проверку прошли число и длина. Ввели показания ХВС:{input_cur}")
+        logger.info(
+            f"ID_TG:{message.from_user.id}|Проверку прошли число и длина. Ввели показания {display_type}:{input_cur}")
         if data.get('last_input') != ' ':
             logger.info(f"ID_TG:{message.from_user.id}|У нас есть предыдущее показание, алгоритм проверки дальше")
             if int(input_cur) >= int(data.get('last_input')):
                 logger.info(f"ID_TG:{message.from_user.id}|Значение в норме записываем в бд")
+                await state.clear()
+                # функция добавления или обновления показаний
+                await db.add_or_update_pokazaniya(data.get('ls'), data.get('kv'), data.get('type_ipu'), input_cur)
+                sent_mess = await message.answer(f"Показания приняты успешно!", reply_markup=await kb.inline_back(
+                    data.get('ls')))
+                user_state.last_message_ids.append(sent_mess.message_id)
+                await db.update_state(user_state)
+
             else:
                 logger.info(f"ID_TG:{message.from_user.id}|Ошибка значение меньше чем предыдущее")
                 await message.answer("Введенное значение меньше предыдущего! Попробуйте еще раз:")
         else:
             logger.info(f"ID_TG:{message.from_user.id}|НЕТ предыдущих показаний. Не с чем сравнивать, записываем в бд ")
+            await state.clear()
+            # функция добавления или обновления показаний
     else:
-        logger.error(f"ID_TG:{message.from_user.id}|Вы ввели некорректное значение ХВС!")
+        logger.error(f"ID_TG:{message.from_user.id}|Вы ввели некорректное значение {display_type}!")
         await message.answer("Вы ввели некорректное значение! Попробуйте еще раз:")
 
 
