@@ -70,9 +70,9 @@ class Pokazaniya(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     ls = Column(Integer, nullable=False)
     kv = Column(Integer, nullable=False)
-    hv = Column(Integer)
-    gv = Column(Integer)
-    e = Column(Integer)
+    hv = Column(String(10))
+    gv = Column(String(10))
+    e = Column(String(10))
     date = Column(Date, nullable=False)
 
     def __repr__(self):
@@ -111,5 +111,5 @@ class UserState(Base):
 
     def __repr__(self):
         return (f"<UserState(id={self.id}, user_id={self.user_id}, "
-                f"last_message_ids={self.last_message_ids}, step={self.step}, "
+                f"last_message_ids={self.last_message_ids}, "
                 f"kv={self.kv}, ls={self.ls}, home={self.home})>")

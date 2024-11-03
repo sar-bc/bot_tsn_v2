@@ -17,7 +17,7 @@ async def inline_show_ipu(ls: int, ipu):
     type_mapping = {
         'hv': 'ХВС',
         'gv': 'ГВС',
-        'e': 'Электрич.'
+        'e': 'ЭЛ-ВО'
     }
     if ipu:
         for i in ipu:

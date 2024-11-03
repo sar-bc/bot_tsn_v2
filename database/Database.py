@@ -1,4 +1,4 @@
-from sqlalchemy import select, and_, delete
+from sqlalchemy import select, and_, delete, case
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from database.models import *
 import os
@@ -105,7 +105,19 @@ class DataBase:
     async def get_ipu(self, ls: int):
         logger.info(f"Получить по лицевому №{ls} список счетчиков")
         async with self.Session() as session:
-            meter_result = await session.execute(select(MeterDev).where(MeterDev.ls == ls))
+            # meter_result = await session.execute(select(MeterDev).where(MeterDev.ls == ls))
+            meter_result = await session.execute(
+                select(MeterDev)
+                .where(MeterDev.ls == ls)
+                .order_by(case(
+                    {
+                        'hv': 1,
+                        'gv': 2,
+                        'e': 3
+                    },
+                    value=MeterDev.type
+                ))
+            )
             return meter_result.scalars().all()
 
     async def get_address(self, ls: int):
