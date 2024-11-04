@@ -4,7 +4,7 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 import logging
 from app.user import user
-
+from app.admin import admin
 from database.Database import DataBase
 from dotenv import load_dotenv
 import os
@@ -27,7 +27,7 @@ dp = Dispatcher()
 
 
 async def main():
-    dp.include_routers(user)
+    dp.include_routers(user, admin)
     dp.startup.register(startup)
     dp.shutdown.register(shutdown)
 

@@ -29,16 +29,16 @@ class DataBase:
             state = await session.scalar(select(UserState).where(UserState.user_id == id_tg))
 
             if state is None:
-                logger.info(f'Состояние не найдено для user_id: {id_tg}. Создание нового состояния.')
+                logger.info(f'Состояние не найдено для user_state_id: {id_tg}. Создание нового состояния.')
                 # Если состояния нет, создаем новое
                 state = UserState(user_id=id_tg)
                 session.add(state)
                 await session.commit()  # Сохраняем изменения
                 state = await session.scalar(select(UserState).where(UserState.user_id == id_tg))
-                logger.info(f'Создано состояние state:{state.user_id}')
+                logger.info(f'Создано состояние user_state:{state.user_id}')
                 return state
             else:
-                logger.info(f'Получено состояние для user_id: {id_tg}.')
+                logger.info(f'Получено состояние для user_state_id: {id_tg}.')
 
                 return state
 
@@ -185,3 +185,6 @@ class DataBase:
                 session.add(new_record)  # Добавляем новую запись в сессию
                 await session.commit()  # Сохраняем новую запись
                 logger.info("Новая запись сохранена.")
+
+    async def add_to_csv_data(self, **kwargs):
+        print(kwargs)

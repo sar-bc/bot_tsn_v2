@@ -10,6 +10,18 @@ class Base(AsyncAttrs, DeclarativeBase):
 
 
 ####################################
+class AdminBot(Base):
+    __tablename__ = 'AdminBot'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    id_tg = Column(BigInteger, nullable=False)
+    username = Column(String(100), nullable=True)
+
+    def __repr__(self):
+        return (f"<AdminBot(id={self.id}, id_tg={self.id_tg}, username={self.username})>")
+
+
+####################################
 class UsersBot(Base):
     __tablename__ = 'UsersBot'
 
@@ -28,24 +40,27 @@ class UsersBot(Base):
 
 ####################################
 class Users(Base):
-    __tablename__ = 'Users'  # Исправлено на __tablename__
+    __tablename__ = 'Users'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     ls = Column(Integer, nullable=False, unique=True)
     home = Column(Integer, nullable=False)
     kv = Column(Integer, nullable=False)
     address = Column(Text)
-    meters = relationship('MeterDev', back_populates='user')
+
+    # meters = relationship('MeterDev', back_populates='user')
 
     def __repr__(self):  # Исправлено на __repr__
         return f"<Users(id={self.id}, ls={self.ls}, home={self.home}, kv={self.kv}, address='{self.address}')>"
+
 
 ####################################
 class MeterDev(Base):
     __tablename__ = 'MeterDev'  # Исправлено на __tablename__
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    ls = Column(Integer, ForeignKey('Users.ls'), nullable=False)
+    # ls = Column(Integer, ForeignKey('Users.ls'), nullable=False)
+    ls = Column(Integer, nullable=False)
     name = Column(String(250), nullable=True, default='')
     number = Column(String(100), unique=True, nullable=True, default='')
     data_pov_next = Column(Date, nullable=True)
@@ -55,13 +70,15 @@ class MeterDev(Base):
     __table_args__ = (
         CheckConstraint("type IN ('hv', 'gv', 'e')", name="check_type"),
     )
+
     # Связь с пользователем
-    user = relationship('Users', back_populates='meters')
+    # user = relationship('Users', back_populates='meters')
 
     def __repr__(self):  # Определение метода __repr__
         return (f"<MeterDev(id={self.id}, ls={self.ls}, name='{self.name}', "
                 f"number='{self.number}', data_pov_next='{self.data_pov_next}', "
                 f"type='{self.type}')>")
+
 
 ####################################
 class Pokazaniya(Base):
