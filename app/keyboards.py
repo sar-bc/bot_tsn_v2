@@ -45,3 +45,13 @@ async def inline_back(ls: int):
     keyword = InlineKeyboardBuilder()
     keyword.row(InlineKeyboardButton(text=f'⬅️ Возврат к списку счетчиков', callback_data=f'show_ls:{ls}'))
     return keyword.as_markup()
+
+
+# Admin keyboars
+
+async def inline_menu_admin():
+    keyword = InlineKeyboardBuilder()
+    keyword.row(InlineKeyboardButton(text=f"Импорт лицевых счетов 📂", callback_data='import_users'))
+    keyword.row(InlineKeyboardButton(text=f"Импорт приборов учета  🗃", callback_data='import_ipu'))
+    keyword.row(InlineKeyboardButton(text=f"Импорт показаний 📃", callback_data='import_pokazaniya'))
+    return keyword.as_markup()

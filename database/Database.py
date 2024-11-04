@@ -186,5 +186,12 @@ class DataBase:
                 await session.commit()  # Сохраняем новую запись
                 logger.info("Новая запись сохранена.")
 
+    async def check_admin(self, id_tg):
+        async with self.Session() as session:
+            result = await session.execute(select(AdminBot).where(AdminBot.id_tg == id_tg))
+            return result.scalar()
+
+
+
     async def add_to_csv_data(self, **kwargs):
         print(kwargs)
