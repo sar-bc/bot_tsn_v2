@@ -1,11 +1,16 @@
-from aiogram import Router
+import os
 from aiogram import Router, F
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message, CallbackQuery, ContentType
 from aiogram.fsm.context import FSMContext
 from aiogram.filters import CommandStart, Command
+from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram import types
 import app.keyboards as kb
 import logging
+from app.states import ImportUsers
 from database.Database import DataBase
+import csv
+
 type_mapping = {
     'hv': 'ХВС',
     'gv': 'ГВС',
@@ -23,7 +28,8 @@ admin = Router()
 
 
 @admin.message(F.text.lower() == 'admin')
-async def admin_command(message: Message):
+async def admin_command(message: Message, state: FSMContext):
+    await state.clear()
     # Получаем Telegram ID пользователя
     telegram_id = message.from_user.id
     db = DataBase()
@@ -51,3 +57,37 @@ async def import_users(callback: CallbackQuery, state: FSMContext):
                                   f"107497;7;98;Полный адрес\n"
                                   f"\n\n"
                                   f"Кодировка файла utf-8")
+    await state.set_state(ImportUsers.input_file)
+
+
+@admin.message(ImportUsers.input_file)
+async def process_import_users(message: Message, state: FSMContext):
+    from main import bot
+    document = message.document
+    file_id = document.file_id
+
+    # Скачиваем файл
+    file = await bot.get_file(file_id)
+    file_name = document.file_name  # Получаем имя файла
+    file_path = os.path.join("uploaded_files", file_name)  # Путь к сохранению
+
+    # Создаем директорию, если её нет
+    os.makedirs("uploaded_files", exist_ok=True)
+
+    # Сохраняем файл на сервере
+    await bot.download_file(file.file_path, file_path)
+    logger.info(f"file:{file_path}")
+    await message.answer("Файл успешно загружен! Ожидайте обработки...")
+    add_data_from_csv(file_path)
+
+
+def add_data_from_csv(file_path):
+    with open(file_path, 'r', encoding='utf-8') as csv_file:
+        rows = csv.reader(csv_file, delimiter=';')
+        if next(rows) != ['ls', 'home', 'kv', 'address']:
+            logger.error("Неверные заголовки файла")
+            return False
+
+        for row in rows:
+            ls, home, kv, address = row
+            print(f"ls:{ls};home:{home};kv:{kv};address:{address}")

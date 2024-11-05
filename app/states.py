@@ -15,3 +15,7 @@ class AddPokazaniya(StatesGroup):
     last_input = State()
 
 
+class ImportUsers(StatesGroup):
+    input_file = State()
+
+
