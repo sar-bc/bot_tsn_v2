@@ -191,7 +191,8 @@ class DataBase:
             result = await session.execute(select(AdminBot).where(AdminBot.id_tg == id_tg))
             return result.scalar()
 
+    async def add_or_update_pokazaniya(self, ls: int, kv: int, type_ipu: str, value: str):
+        ...
 
-
-    async def add_to_csv_data(self, **kwargs):
-        print(kwargs)
+    # async def add_to_csv_data(self, **kwargs):
+    #     print(kwargs)

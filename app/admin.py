@@ -91,3 +91,5 @@ def add_data_from_csv(file_path):
         for row in rows:
             ls, home, kv, address = row
             print(f"ls:{ls};home:{home};kv:{kv};address:{address}")
+
+    return False
