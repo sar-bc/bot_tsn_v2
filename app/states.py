@@ -19,3 +19,5 @@ class ImportUsers(StatesGroup):
     input_file = State()
 
 
+class ImportIpu(StatesGroup):
+    input_file = State()

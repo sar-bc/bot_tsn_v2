@@ -194,5 +194,24 @@ class DataBase:
     async def add_or_update_pokazaniya(self, ls: int, kv: int, type_ipu: str, value: str):
         ...
 
-    # async def add_to_csv_data(self, **kwargs):
-    #     print(kwargs)
+    async def add_or_update_user(self, ls, home, kv, address):
+        async with self.Session() as session:
+            # Проверяем, существует ли запись с такими же ls, kv и текущей датой
+            result = await session.execute(select(Users).where(Users.ls == ls))
+            existing_record = result.scalars().first()  # Получаем первую подходящую запись
+
+            if existing_record:
+                logger.info(f"Обновляем запись: {existing_record}")
+                existing_record.ls = ls
+                existing_record.home = home
+                existing_record.kv = kv
+                existing_record.address = address
+                await session.commit()  # Сохраняем изменения
+                logger.info("Запись обновлена.")
+            else:
+                # Если записи нет, создаем новую
+                new_record = Users(ls=ls, home=home, kv=kv, address=address)
+                logger.info("Создаем новую запись с пользователем")
+                session.add(new_record)  # Добавляем новую запись в сессию
+                await session.commit()  # Сохраняем новую запись
+                logger.info("Новая запись сохранена.")

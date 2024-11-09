@@ -52,10 +52,6 @@ async def import_users(callback: CallbackQuery, state: FSMContext):
     await callback.message.answer(f"Прикрепите файл формата csv\n"
                                   f"Содержимое файла должно быть в таком формате:\n"
                                   f"ls;home;kv;address\n"
-                                  f"123456;7;50;Полный адрес\n"
-                                  f"654321;7;55;Полный адрес\n"
-                                  f"107497;7;98;Полный адрес\n"
-                                  f"\n\n"
                                   f"Кодировка файла utf-8")
     await state.set_state(ImportUsers.input_file)
 
@@ -78,18 +74,33 @@ async def process_import_users(message: Message, state: FSMContext):
     await bot.download_file(file.file_path, file_path)
     logger.info(f"file:{file_path}")
     await message.answer("Файл успешно загружен! Ожидайте обработки...")
-    add_data_from_csv(file_path)
+    if await add_user_from_csv(file_path):
+        await message.answer("Файл успешно импортирован")
+        await admin_command(message, state)
 
 
-def add_data_from_csv(file_path):
+@admin.callback_query(F.data.startswith('import_ipu'))
+async def import_ipu(callback: CallbackQuery, state: FSMContext):
+    db = DataBase()
+    user_state = await db.get_state(callback.from_user.id)
+    await db.delete_messages(user_state)
+    await callback.message.answer(f"Прикрепите файл формата csv\n"
+                                  f"Содержимое файла должно быть в таком формате:\n"
+                                  f"ls;home;kv;address\n"
+                                  f"Кодировка файла utf-8")
+    await state.set_state(ImportUsers.input_file)
+
+
+# ===============================
+async def add_user_from_csv(file_path):
     with open(file_path, 'r', encoding='utf-8') as csv_file:
         rows = csv.reader(csv_file, delimiter=';')
         if next(rows) != ['ls', 'home', 'kv', 'address']:
             logger.error("Неверные заголовки файла")
             return False
-
+        db = DataBase()
         for row in rows:
             ls, home, kv, address = row
-            print(f"ls:{ls};home:{home};kv:{kv};address:{address}")
+            await db.add_or_update_user(ls, home, kv, address)
 
-    return False
+    return True
