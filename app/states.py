@@ -21,3 +21,7 @@ class ImportUsers(StatesGroup):
 
 class ImportIpu(StatesGroup):
     input_file = State()
+
+
+class ImportPokazaniya(StatesGroup):
+    input_file = State()

@@ -4,6 +4,7 @@ from database.models import *
 import os
 import logging
 from datetime import date
+from datetime import datetime
 
 # Настройка логирования
 logging.basicConfig(
@@ -191,9 +192,6 @@ class DataBase:
             result = await session.execute(select(AdminBot).where(AdminBot.id_tg == id_tg))
             return result.scalar()
 
-    async def add_or_update_pokazaniya(self, ls: int, kv: int, type_ipu: str, value: str):
-        ...
-
     async def add_or_update_user(self, ls, home, kv, address):
         async with self.Session() as session:
             # Проверяем, существует ли запись с такими же ls, kv и текущей датой
@@ -212,6 +210,77 @@ class DataBase:
                 # Если записи нет, создаем новую
                 new_record = Users(ls=ls, home=home, kv=kv, address=address)
                 logger.info("Создаем новую запись с пользователем")
+                session.add(new_record)  # Добавляем новую запись в сессию
+                await session.commit()  # Сохраняем новую запись
+                logger.info("Новая запись сохранена.")
+
+    async def add_or_update_ipu(self, ls, name, number, data_pov_next, location, type_):
+        async with self.Session() as session:
+            # Проверяем, существует ли запись с такими же ls, kv и текущей датой
+            result = await session.execute(
+                select(MeterDev).where(
+                    and_(MeterDev.ls == ls, MeterDev.type == type_)
+                )
+            )
+            existing_record = result.scalars().first()  # Получаем первую подходящую запись
+
+            if existing_record:
+                logger.info(f"Обновляем запись: {existing_record}")
+                existing_record.ls = ls
+                existing_record.name = name
+                existing_record.number = number
+                existing_record.data_pov_next = date.fromisoformat(data_pov_next) if data_pov_next else None
+                existing_record.location = location
+                existing_record.type = type_
+                await session.commit()  # Сохраняем изменения
+                logger.info("Запись обновлена.")
+            else:
+                # Если записи нет, создаем новую
+                new_record = MeterDev(
+                    ls=ls,
+                    name=name,
+                    number=number,
+                    data_pov_next=date.fromisoformat(data_pov_next) if data_pov_next else None,
+                    location=location,
+                    type=type_
+                )
+                logger.info("Создаем новую запись ipu")
+                session.add(new_record)  # Добавляем новую запись в сессию
+                await session.commit()  # Сохраняем новую запись
+                logger.info("Новая запись сохранена.")
+
+    async def add_or_update_pokaz_admin(self, ls, kv, hv, gv, e, date):
+        async with self.Session() as session:
+            # Проверяем, существует ли запись с такими же ls, kv и текущей датой
+            result = await session.execute(
+                select(Pokazaniya).where(
+                    and_(Pokazaniya.ls == ls, Pokazaniya.date == date)
+                )
+            )
+            existing_record = result.scalars().first()  # Получаем первую подходящую запись
+            # Преобразуем строку даты в объект date
+            date_value = datetime.strptime(date, '%Y-%m-%d').date()
+            if existing_record:
+                logger.info(f"Обновляем запись: {existing_record}")
+                existing_record.ls = ls
+                existing_record.kv = kv
+                existing_record.hv = hv
+                existing_record.gv = gv
+                existing_record.e = e
+                existing_record.date = date_value
+                await session.commit()  # Сохраняем изменения
+                logger.info("Запись обновлена.")
+            else:
+                # Если записи нет, создаем новую
+                new_record = Pokazaniya(
+                    ls=ls,
+                    kv=kv,
+                    hv=hv,
+                    gv=gv,
+                    e=e,
+                    date=date_value
+                )
+                logger.info("Создаем новую запись показаний")
                 session.add(new_record)  # Добавляем новую запись в сессию
                 await session.commit()  # Сохраняем новую запись
                 logger.info("Новая запись сохранена.")
