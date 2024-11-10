@@ -54,7 +54,7 @@ async def import_users(callback: CallbackQuery, state: FSMContext):
     await db.delete_messages(user_state)
     await callback.message.answer(f"Прикрепите файл User формата csv\n"
                                   f"Содержимое файла должно быть в таком формате:\n"
-                                  f"ls;home;kv;address\n"
+                                  f"ls;home;kv;address;flag\n"
                                   f"Кодировка файла utf-8")
     await state.set_state(ImportUsers.input_file)
 
@@ -88,7 +88,7 @@ async def process_import_users(message: Message, state: FSMContext):
         await message.answer("❌ Ошибка формата файла! Попробуйте еще раз...")
         await message.answer(f"Прикрепите файл User формата csv\n"
                              f"Содержимое файла должно быть в таком формате:\n"
-                             f"ls;home;kv;address\n"
+                             f"ls;home;kv;address;flag\n"
                              f"Кодировка файла utf-8")
         delete_file(file_path)
 
@@ -197,13 +197,25 @@ async def process_import_pokaz(message: Message, state: FSMContext):
 async def add_user_from_csv(file_path):
     with open(file_path, 'r', encoding='utf-8') as csv_file:
         rows = csv.reader(csv_file, delimiter=';')
-        if next(rows) != ['ls', 'home', 'kv', 'address']:
+        headers = next(rows)
+
+        # Проверяем заголовки
+        headers_full = ['ls', 'home', 'kv', 'address', 'flag']
+        headers_partial = ['ls', 'home', 'kv', 'address']
+
+        if headers != headers_full and headers != headers_partial:
             logger.error("Неверные заголовки файла")
             return False
+
         db = DataBase()
         for row in rows:
-            ls, home, kv, address = row
-            await db.add_or_update_user(ls, home, kv, address)
+            ls, home, kv, address = row[:4]  # берем 4 элемента
+            flag_value = row[4].strip().lower() == '1' if len(row) > 4 else False  # Проверка флага
+
+            if flag_value:
+                await db.del_user(ls)
+            else:
+                await db.add_or_update_user(ls, home, kv, address)
 
     return True
 
@@ -213,13 +225,25 @@ async def add_user_from_csv(file_path):
 async def add_ipu_from_csv(file_path):
     with open(file_path, 'r', encoding='utf-8') as csv_file:
         rows = csv.reader(csv_file, delimiter=';')
-        if next(rows) != ['ls', 'name', 'number', 'data_pov_next', 'location', 'type']:
+        headers = next(rows)
+
+        # Проверяем заголовки
+        headers_full = ['ls', 'name', 'number', 'data_pov_next', 'location', 'type', 'flag']
+        headers_partial = ['ls', 'name', 'number', 'data_pov_next', 'location', 'type']
+
+        if headers != headers_full and headers != headers_partial:
             logger.error("Неверные заголовки файла")
             return False
+
         db = DataBase()
         for row in rows:
-            ls, name, number, data_pov_next, location, type_ = row
-            await db.add_or_update_ipu(ls, name, number, data_pov_next, location, type_)
+            ls, name, number, data_pov_next, location, type_ = row[:6]
+            flag_value = row[6].strip().lower() == '1' if len(row) > 6 else False  # Проверка флага
+
+            if flag_value:
+                await db.del_ipu(ls, type_)
+            else:
+                await db.add_or_update_ipu(ls, name, number, data_pov_next, location, type_)
 
     return True
 
@@ -228,13 +252,25 @@ async def add_ipu_from_csv(file_path):
 async def add_pokaz_from_csv(file_path):
     with open(file_path, 'r', encoding='utf-8') as csv_file:
         rows = csv.reader(csv_file, delimiter=';')
-        if next(rows) != ['ls', 'kv', 'hv', 'gv', 'e', 'date']:
+        headers = next(rows)
+
+        # Проверяем заголовки
+        headers_full = ['ls', 'kv', 'hv', 'gv', 'e', 'date', 'flag']
+        headers_partial = ['ls', 'kv', 'hv', 'gv', 'e', 'date']
+
+        if headers != headers_full and headers != headers_partial:
             logger.error("Неверные заголовки файла")
             return False
+
         db = DataBase()
         for row in rows:
-            ls, kv, hv, gv, e, date = row
-            await db.add_or_update_pokaz_admin(ls, kv, hv, gv, e, date)
+            ls, kv, hv, gv, e, date = row[:6]
+            flag_value = row[6].strip().lower() == '1' if len(row) > 6 else False  # Проверка флага
+
+            if flag_value:
+                await db.pokaz_admin_del(ls, date)
+            else:
+                await db.add_or_update_pokaz_admin(ls, kv, hv, gv, e, date)
 
     return True
 

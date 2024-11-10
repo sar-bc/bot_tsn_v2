@@ -16,12 +16,15 @@ class AddPokazaniya(StatesGroup):
 
 
 class ImportUsers(StatesGroup):
+    choice = State()
     input_file = State()
 
 
 class ImportIpu(StatesGroup):
+    choice = State()
     input_file = State()
 
 
 class ImportPokazaniya(StatesGroup):
+    choice = State()
     input_file = State()

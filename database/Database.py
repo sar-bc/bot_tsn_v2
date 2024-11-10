@@ -12,6 +12,11 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
 )
 logger = logging.getLogger(__name__)
+type_mapping = {
+    'hv': 'ХВС',
+    'gv': 'ГВС',
+    'e': 'ЭЛ-ВО'
+}
 
 
 class DataBase:
@@ -244,7 +249,7 @@ class DataBase:
                     location=location,
                     type=type_
                 )
-                logger.info("Создаем новую запись ipu")
+                logger.info(f"Создаем новую запись ipu ls={ls} {type_mapping.get(type_)}")
                 session.add(new_record)  # Добавляем новую запись в сессию
                 await session.commit()  # Сохраняем новую запись
                 logger.info("Новая запись сохранена.")
@@ -284,3 +289,55 @@ class DataBase:
                 session.add(new_record)  # Добавляем новую запись в сессию
                 await session.commit()  # Сохраняем новую запись
                 logger.info("Новая запись сохранена.")
+
+    async def del_user(self, ls):
+        async with self.Session() as session:
+            result = await session.execute(
+                delete(Users).where(
+                    Users.ls == ls
+                )
+            )
+            await session.commit()
+
+            # Проверяем количество удаленных строк
+            if result.rowcount == 0:
+                logger.warning(f"Запись с ls={ls} не найдена для удаления.")
+                return False  # Запись не найдена
+            else:
+                logger.info(f"Запись с ls={ls} удалена.")
+                return True  # Запись успешно удалена
+
+    async def del_ipu(self, ls, type_):
+        async with self.Session() as session:
+            result = await session.execute(
+                delete(MeterDev).where(
+                    and_(MeterDev.ls == ls, MeterDev.type == type_)
+                )
+            )
+            await session.commit()
+
+            # Проверяем количество удаленных строк
+            if result.rowcount == 0:
+                logger.warning(f"Запись с ls={ls} {type_mapping.get(type_)}  не найдена для удаления.")
+                return False  # Запись не найдена
+            else:
+                logger.info(f"Запись с ls={ls} {type_mapping.get(type_)} удалена.")
+                return True  # Запись успешно удалена
+
+    async def pokaz_admin_del(self, ls, data: str):
+        date = datetime.strptime(data, "%Y-%m-%d").date()
+        async with self.Session() as session:
+            result = await session.execute(
+                delete(Pokazaniya).where(
+                    and_(Pokazaniya.ls == ls, Pokazaniya.date == date)
+                )
+            )
+            await session.commit()
+
+            # Проверяем количество удаленных строк
+            if result.rowcount == 0:
+                logger.warning(f"Запись с ls={ls} {date}  не найдена для удаления.")
+                return False  # Запись не найдена
+            else:
+                logger.info(f"Запись с ls={ls} {date} удалена.")
+                return True  # Запись успешно удалена
