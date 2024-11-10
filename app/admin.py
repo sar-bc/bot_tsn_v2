@@ -1,13 +1,13 @@
 import os
 from aiogram import Router, F
-from aiogram.types import Message, CallbackQuery, ContentType
+from aiogram.types import Message, CallbackQuery, ContentType, InputFile
 from aiogram.fsm.context import FSMContext
 from aiogram.filters import CommandStart, Command
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram import types
 import app.keyboards as kb
 import logging
-from app.states import ImportUsers, ImportIpu, ImportPokazaniya
+from app.states import ImportUsers, ImportIpu, ImportPokazaniya, ChoiceHome
 from database.Database import DataBase
 import csv
 from pathlib import Path
@@ -191,8 +191,77 @@ async def process_import_pokaz(message: Message, state: FSMContext):
         delete_file(file_path)
 
 
+# ====================================================================
+# Экспорт лицевых счетов
+@admin.callback_query(F.data.startswith('export_users'))
+async def export_users(callback: CallbackQuery, state: FSMContext):
+    db = DataBase()
+    user_state = await db.get_state(callback.from_user.id)
+    await db.delete_messages(user_state)
+    sent_mess = await callback.message.answer("🏘 Для экспорта лицевых счетов выберите дом...",
+                                              reply_markup=await kb.reply_choice_home())
+    user_state.last_message_ids.append(sent_mess.message_id)
+    await db.update_state(user_state)
+    await state.set_state(ChoiceHome.input_home)
+
+
+@admin.message(ChoiceHome.input_home)
+async def process_input_home(message: Message, state: FSMContext):
+    db = DataBase()
+    user_state = await db.get_state(message.from_user.id)
+    await db.delete_messages(user_state)
+    await state.clear()
+    await message.answer(f"Собираю данные по дому №{message.text}. Ожидайте ...")
+
+    file_path = 'uploaded_files/users.csv'  # Путь к файлу для сохранения данных
+    await export_users_to_csv(file_path, message.text)  # Экспортируем данные в CSV
+
+    await send_file_to_user(message, file_path)  # Отправляем файл пользователю
+
+    # Удаляем файл после отправки
+    os.remove(file_path)
+    await admin_command(message, state)
+
+
 # =============FUNCTIN==================
 
+async def export_users_to_csv(file_path, home):
+    """Экспорт данных пользователей в CSV-файл."""
+    # Создаем директорию, если её нет
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+    try:
+        with open(file_path, 'w', newline='', encoding='utf-8') as csv_file:
+            writer = csv.writer(csv_file, delimiter=';')
+            writer.writerow(['ls', 'home', 'kv', 'address'])  # Записываем заголовки
+            db = DataBase()
+            users = await db.get_users_home(home)
+
+            if not users:
+                logger.warning(f"Не найдены пользователи для дома {home}.")
+                return
+
+            for user in users:
+                logger.info(f"Записываем в файл пользователя: {user.ls}, {user.home}, {user.kv}, {user.address}")
+                writer.writerow([user.ls, user.home, user.kv, user.address])  # Записываем данные
+        logger.info(f"Данные успешно экспортированы в файл: {file_path}")
+    except Exception as e:
+        logger.error(f"Ошибка при экспорте данных в CSV: {e}")
+
+
+# ========================================================================
+async def send_file_to_user(message: Message, file_path: str):
+    """Отправка файла пользователю."""
+    try:
+        # Используем InputFile для отправки файла
+        input_file = InputFile(file_path)  # Создаем InputFile с путем к файлу
+        await message.answer_document(input_file)  # Отправляем файл пользователю
+    except FileNotFoundError:
+        await message.answer("Файл не найден.")
+    except Exception as e:
+        await message.answer(f"Произошла ошибка при отправке файла: {e}")
+
+
+# ========================================================================
 
 async def add_user_from_csv(file_path):
     with open(file_path, 'r', encoding='utf-8') as csv_file:

@@ -341,3 +341,10 @@ class DataBase:
             else:
                 logger.info(f"Запись с ls={ls} {date} удалена.")
                 return True  # Запись успешно удалена
+
+    async def get_users_home(self, home):
+        async with self.Session() as session:
+            result = await session.execute(
+                select(Users).where(Users.home == home).order_by(Users.kv)
+            )
+            return result.scalars().all()

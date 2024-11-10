@@ -28,3 +28,7 @@ class ImportIpu(StatesGroup):
 class ImportPokazaniya(StatesGroup):
     choice = State()
     input_file = State()
+
+
+class ChoiceHome(StatesGroup):
+    input_home = State()

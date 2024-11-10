@@ -51,8 +51,22 @@ async def inline_back(ls: int):
 
 async def inline_menu_admin():
     keyword = InlineKeyboardBuilder()
-    keyword.row(InlineKeyboardButton(text=f"Импорт лицевых счетов 📂", callback_data='import_users'))
-    keyword.row(InlineKeyboardButton(text=f"Экспорт лицевых счетов 📂", callback_data='export_users'))
+    keyword.row(InlineKeyboardButton(text=f"Импорт лицевых счетов 🗂", callback_data='import_users'))
+    keyword.row(InlineKeyboardButton(text=f"Экспорт лицевых счетов ♻️", callback_data='export_users'))
     keyword.row(InlineKeyboardButton(text=f"Импорт приборов учета  🗃", callback_data='import_ipu'))
     keyword.row(InlineKeyboardButton(text=f"Импорт показаний 📃", callback_data='import_pokazaniya'))
     return keyword.as_markup()
+
+
+homes = ['7', '9', '11']
+
+
+async def reply_choice_home():
+    # Создаем клавиатуру
+    keyboard = ReplyKeyboardBuilder()
+
+    for home in homes:
+        keyboard.add(KeyboardButton(text=home))  # Добавляем кнопку с текстом
+
+    return keyboard.adjust(3).as_markup(resize_keyboard=True)  # Настраиваем количество кнопок в строке
+
