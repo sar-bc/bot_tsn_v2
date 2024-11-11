@@ -348,3 +348,10 @@ class DataBase:
                 select(Users).where(Users.home == home).order_by(Users.kv)
             )
             return result.scalars().all()
+
+    async def get_ipu_all(self):
+        async with self.Session() as session:
+            result = await session.execute(
+                select(MeterDev).order_by(MeterDev.ls)
+            )
+            return result.scalars().all()

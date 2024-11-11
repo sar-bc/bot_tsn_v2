@@ -30,5 +30,9 @@ class ImportPokazaniya(StatesGroup):
     input_file = State()
 
 
-class ChoiceHome(StatesGroup):
+class ChoiceHomeUser(StatesGroup):
     input_home = State()
+
+
+class ExportIpu(StatesGroup):
+    export = State()
