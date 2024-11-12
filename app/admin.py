@@ -7,7 +7,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram import types
 import app.keyboards as kb
 import logging
-from app.states import ImportUsers, ImportIpu, ImportPokazaniya, ChoiceHomeUser, ExportIpu
+from app.states import ImportUsers, ImportIpu, ImportPokazaniya, ChoiceHomeUser, Ipu, ExportPokazaniya
 from database.Database import DataBase
 import csv
 from pathlib import Path
@@ -47,6 +47,7 @@ async def admin_command(message: Message, state: FSMContext):
 
 # ====================================================================
 # Импорт User
+
 @admin.callback_query(F.data.startswith('import_users'))
 async def import_users(callback: CallbackQuery, state: FSMContext):
     db = DataBase()
@@ -227,27 +228,45 @@ async def process_export_user_home(message: Message, state: FSMContext):
 # Экспорт приборов учета
 
 @admin.callback_query(F.data.startswith('export_ipu'))
-async def export_ipu(callback: CallbackQuery, state: FSMContext):
+async def export_users(callback: CallbackQuery, state: FSMContext):
     db = DataBase()
     user_state = await db.get_state(callback.from_user.id)
     await db.delete_messages(user_state)
-    await callback.message.answer(f"Собираю данные. Ожидайте ...")
-    await state.set_state(ExportIpu.export)
-    print(f"state={await state.get_state()}")
-
-
-@admin.message(ExportIpu.export)
-async def process_export_ipu(message: Message, state: FSMContext):
-    print(f"Зашли")
-    print(f"state={await state.get_state()}")
+    await callback.message.answer("Собираю данные. Ожидайте...")
     file_path = f'uploaded_files/export_ipu.csv'  # Путь к файлу для сохранения данных
     await export_ipu_to_csv(file_path)  # Экспортируем данные в CSV
 
-    await send_file_to_user(message, file_path)  # Отправляем файл пользователю
+    await send_file_to_user(callback.message, file_path)  # Отправляем файл пользователю
 
     # Удаляем файл после отправки
     os.remove(file_path)
-    await admin_command(message, state)
+    sent_mess = await callback.message.answer(f"Данные выгружены", reply_markup=await kb.reply_admin())
+    user_state.last_message_ids.append(sent_mess.message_id)
+    await db.update_state(user_state)
+
+
+# @admin.message(Ipu.file)
+# async def process_export_ipu(message: Message, state: FSMContext):
+#     print(f"Зашли")
+#     print(f"state={await state.get_state()}")
+# file_path = f'uploaded_files/export_ipu.csv'  # Путь к файлу для сохранения данных
+# await export_ipu_to_csv(file_path)  # Экспортируем данные в CSV
+#
+# await send_file_to_user(message, file_path)  # Отправляем файл пользователю
+#
+# # Удаляем файл после отправки
+# os.remove(file_path)
+# await admin_command(message, state)
+
+# ====================================================================
+# Экспорт показаний
+
+@admin.callback_query(F.data.startswith('export_pokazaniya'))
+async def export_pokazaniya(callback: CallbackQuery, state: FSMContext):
+    db = DataBase()
+    user_state = await db.get_state(callback.from_user.id)
+    await db.delete_messages(user_state)
+    await callback.message.answer("Собираю данные. Ожидайте...")
 
 
 # =============FUNCTIN==================

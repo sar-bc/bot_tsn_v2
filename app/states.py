@@ -34,5 +34,10 @@ class ChoiceHomeUser(StatesGroup):
     input_home = State()
 
 
-class ExportIpu(StatesGroup):
-    export = State()
+class Ipu(StatesGroup):
+    file = State()
+
+
+class ExportPokazaniya(StatesGroup):
+    month = State()
+    year - State()
