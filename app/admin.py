@@ -7,7 +7,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram import types
 import app.keyboards as kb
 import logging
-from app.states import ImportUsers, ImportIpu, ImportPokazaniya, ChoiceHomeUser, Ipu, ExportPokazaniya
+from app.states import ImportUsers, ImportIpu, ImportPokazaniya, ChoiceHomeUser, ExportPokazaniya, SendMess
 from database.Database import DataBase
 import csv
 from pathlib import Path
@@ -16,6 +16,20 @@ type_mapping = {
     'hv': 'ХВС',
     'gv': 'ГВС',
     'e': 'ЭЛ-ВО'
+}
+month_mapping = {
+    'Январь': '1',
+    'Февраль': '2',
+    'Март': '3',
+    'Апрель': '4',
+    'Май': '5',
+    'Июнь': '6',
+    'Июль': '7',
+    'Август': '8',
+    'Сентябрь': '9',
+    'Октябрь': '10',
+    'Ноябрь': '11',
+    'Декабрь': '12'
 }
 
 # Настройка логирования
@@ -30,18 +44,28 @@ admin = Router()
 
 @admin.message(F.text.lower() == 'admin')
 async def admin_command(message: Message, state: FSMContext):
-    await state.clear()
-    # Получаем Telegram ID пользователя
     telegram_id = message.from_user.id
+    # await message.answer("Добро пожаловать!")
+    await handle_admin_command(telegram_id, message, state)  # Передаем необходимые параметры
+
+
+async def handle_admin_command(telegram_id: int, message: Message, state: FSMContext):
+    await state.clear()
     db = DataBase()
     admin_tg = await db.check_admin(telegram_id)
-    user_state = await db.get_state(message.from_user.id)
+    user_state = await db.get_state(telegram_id)
+
+    # Удаляем старые сообщения, если есть
     await db.delete_messages(user_state)
-    if admin_tg.id_tg == telegram_id:
-        sent_mess = await message.answer("Добро пожаловать в админ-меню!", reply_markup=await kb.inline_menu_admin())
+
+    if admin_tg and admin_tg.id_tg == telegram_id:
+        # await message.answer("Добро пожаловать!")
+        sent_mess = await message.answer(text="Добро пожаловать!\nАдмин-меню:", reply_markup=await
+        kb.inline_menu_admin())
         user_state.last_message_ids.append(sent_mess.message_id)
         await db.update_state(user_state)
     else:
+        # await message.answer("У вас нет прав доступа.")
         return
 
 
@@ -240,23 +264,11 @@ async def export_users(callback: CallbackQuery, state: FSMContext):
 
     # Удаляем файл после отправки
     os.remove(file_path)
-    sent_mess = await callback.message.answer(f"Данные выгружены", reply_markup=await kb.reply_admin())
+    sent_mess = await callback.message.answer(f"✅ Данные выгружены")
     user_state.last_message_ids.append(sent_mess.message_id)
     await db.update_state(user_state)
+    await handle_admin_command(callback.from_user.id, callback.message, state)
 
-
-# @admin.message(Ipu.file)
-# async def process_export_ipu(message: Message, state: FSMContext):
-#     print(f"Зашли")
-#     print(f"state={await state.get_state()}")
-# file_path = f'uploaded_files/export_ipu.csv'  # Путь к файлу для сохранения данных
-# await export_ipu_to_csv(file_path)  # Экспортируем данные в CSV
-#
-# await send_file_to_user(message, file_path)  # Отправляем файл пользователю
-#
-# # Удаляем файл после отправки
-# os.remove(file_path)
-# await admin_command(message, state)
 
 # ====================================================================
 # Экспорт показаний
@@ -266,10 +278,120 @@ async def export_pokazaniya(callback: CallbackQuery, state: FSMContext):
     db = DataBase()
     user_state = await db.get_state(callback.from_user.id)
     await db.delete_messages(user_state)
-    await callback.message.answer("Собираю данные. Ожидайте...")
+    await callback.message.answer("Выбирите месяц:", reply_markup=await kb.month_keyboard())
+    await state.set_state(ExportPokazaniya.month)
+
+
+@admin.message(ExportPokazaniya.month)
+async def export_pokazaniyz_month(message: Message, state: FSMContext):
+    db = DataBase()
+    user_state = await db.get_state(message.from_user.id)
+    await db.delete_messages(user_state)
+    # Сохраняем текст в состоянии
+    await state.update_data(month=message.text)
+    sent_mess = await message.answer("Выбирите год:", reply_markup=await kb.year_keyboard())
+    user_state.last_message_ids.append(sent_mess.message_id)
+    await db.update_state(user_state)
+    await state.set_state(ExportPokazaniya.year)
+
+
+@admin.message(ExportPokazaniya.year)
+async def export_pokazaniyz_year(message: Message, state: FSMContext):
+    db = DataBase()
+    user_state = await db.get_state(message.from_user.id)
+    await db.delete_messages(user_state)
+    await state.update_data(year=message.text)
+    data = await state.get_data()
+    await state.clear()
+    month = data.get('month')
+    year = data.get('year')
+
+    await message.answer(f"Вы выбрали месяц: {month}, год: {year}.")
+    await message.answer("Собираю данные. Ожидайте...")
+
+    file_path = f'uploaded_files/export_pokazaniya_{month}-{year}.csv'  # Путь к файлу для сохранения данных
+    print(file_path)
+    if await export_pokazaniya_to_csv(file_path, month, year):  # Экспортируем данные в CSV
+        await send_file_to_user(message, file_path)  # Отправляем файл пользователю
+        # Удаляем файл после отправки
+        os.remove(file_path)
+        sent_mess = await message.answer(f"✅ Данные выгружены")
+    else:
+        sent_mess = await message.answer(f"❌ Нет данных для экспорта")
+    # user_state.last_message_ids.append(sent_mess.message_id)
+    # await db.update_state(user_state)
+    await handle_admin_command(message.from_user.id, message, state)
+
+
+# ====================================================================
+# Отправка сообщения пользователям
+
+
+@admin.callback_query(F.data.startswith('send_message'))
+async def send_message(callback: CallbackQuery, state: FSMContext):
+    db = DataBase()
+    user_state = await db.get_state(callback.from_user.id)
+    await db.delete_messages(user_state)
+    await callback.message.answer("Напишите текст сообщения:")
+    await state.set_state(SendMess.mess)
+
+
+@admin.message(SendMess.mess)
+async def process_send(message: Message, state: FSMContext):
+    await state.clear()
+    mess_text = message.text
+    db = DataBase()
+    await message.answer("Идет отправка. Ожидайте... ")
+    # список id telegarma
+    result = await db.get_users_bot()
+
+    if result:
+        await send_mess(result, mess_text)
+        await message.answer("✅ Сообщение успешно отправлено.")
+        await handle_admin_command(message.from_user.id, message, state)
+    else:
+        await message.answer("❌ Нет пользователей")
 
 
 # =============FUNCTIN==================
+async def send_mess(ids, message_text):
+    from main import bot
+    for user in ids:
+        try:
+            await bot.send_message(user.id_tg, message_text)
+            logger.info(f"Сообщение отправлено пользователю {user.id_tg}.")
+        except Exception as e:
+            logger.error(f"Не удалось отправить сообщение пользователю {user.id_tg}: {e}")
+
+
+# =================================================
+async def export_pokazaniya_to_csv(file_path, month, year):
+    month_number = month_mapping.get(month)
+    logger.info(f"Запрос показаний месяц={month_number}, год={year}")
+    # Создаем директорию, если её нет
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+
+    db = DataBase()
+    results = await db.get_pokazaniya(month_number, year)
+    if not results:
+        return False
+
+    try:
+        with open(file_path, 'w', newline='', encoding='utf-8') as csv_file:
+            writer = csv.writer(csv_file, delimiter=';')
+            writer.writerow(['ls', 'kv', 'hv', 'gv', 'e', 'date'])  # Записываем заголовки
+
+            for result in results:
+                logger.info(f"Записываем в файл пользователя: {result.ls}, {result.kv}, {result.hv}, {result.gv},"
+                            f"{result.e}, {result.date}")
+                writer.writerow([result.ls, result.kv, result.hv, result.gv, result.e, result.date])  # Записываем
+                # данные
+            logger.info(f"Данные успешно экспортированы в файл: {file_path}")
+            return True
+
+    except Exception as e:
+        logger.error(f"Ошибка при экспорте данных в CSV: {e}")
+
 
 async def export_users_to_csv(file_path, home):
     """Экспорт данных пользователей в CSV-файл."""
@@ -429,6 +551,8 @@ def delete_file(file_path):
         logger.info("Файл успешно удален!")
     else:
         logger.info("Ошибка удаления! Файл не существует.")
+
 # =====================
+
 # =====================
 # =====================

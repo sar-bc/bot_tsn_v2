@@ -1,6 +1,7 @@
 from aiogram.types import (ReplyKeyboardMarkup, KeyboardButton,
                            InlineKeyboardMarkup, InlineKeyboardButton)
 from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
+from datetime import date
 
 
 async def inline_ls(ls):
@@ -61,8 +62,10 @@ async def inline_menu_admin():
         InlineKeyboardButton(text=f"Экспорт ИПУ  🗃", callback_data='export_ipu')
     )
 
-    keyword.row(InlineKeyboardButton(text=f"Импорт показаний 📃", callback_data='import_pokazaniya'))
-    keyword.row(InlineKeyboardButton(text=f"Экспорт показаний 📘", callback_data='export_pokazaniya'))
+    keyword.row(InlineKeyboardButton(text=f"Импорт показаний 📃", callback_data='import_pokazaniya'),
+                InlineKeyboardButton(text=f"Экспорт показаний 📘", callback_data='export_pokazaniya'))
+    # keyword.row(InlineKeyboardButton(text=f"Экспорт показаний 📘", callback_data='export_pokazaniya'))
+    keyword.row(InlineKeyboardButton(text=f"Отправить сообщение пользователям ✍️", callback_data='send_message'))
     return keyword.as_markup()
 
 
@@ -79,42 +82,29 @@ async def reply_choice_home():
     return keyboard.adjust(3).as_markup(resize_keyboard=True)  # Настраиваем количество кнопок в строке
 
 
-async def reply_admin():
-    kb_list = [
-        [KeyboardButton(text="admin")]
-    ]
-    keyboard = ReplyKeyboardMarkup(keyboard=kb_list, resize_keyboard=True)
-
-    return keyboard
-
-
 # Функция для создания клавиатуры выбора месяца
 async def month_keyboard():
     """Создает клавиатуру для выбора месяца."""
-    months = [
-        KeyboardButton("Январь"),
-        KeyboardButton("Февраль"),
-        KeyboardButton("Март"),
-        KeyboardButton("Апрель"),
-        KeyboardButton("Май"),
-        KeyboardButton("Июнь"),
-        KeyboardButton("Июль"),
-        KeyboardButton("Август"),
-        KeyboardButton("Сентябрь"),
-        KeyboardButton("Октябрь"),
-        KeyboardButton("Ноябрь"),
-        KeyboardButton("Декабрь")
-    ]
-    keyboard = ReplyKeyboardMarkup(keyboard=months, resize_keyboard=True)
-    return keyboard
+    months = ["Январь", "Февраль", "Март", "Апрель",
+              "Май", "Июнь", "Июль", "Август",
+              "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"
+              ]
+    keyboard = ReplyKeyboardBuilder()
+
+    for month in months:
+        keyboard.add(KeyboardButton(text=month))  # Добавляем кнопку с текстом
+
+    return keyboard.adjust(4).as_markup(resize_keyboard=True)  # Настраиваем количество кнопок в строке
 
 
 # Функция для создания инлайн-клавиатуры выбора года
 async def year_keyboard():
     """Создает инлайн-клавиатуру для выбора года."""
-    keyboard = InlineKeyboardBuilder()
-    current_year = 2024  # Замените на текущий год или получите динамически
-    for year in range(current_year - 2, current_year + 1):  # Создаем диапазон лет
-        keyboard.row(InlineKeyboardButton(text=str(year), callback_data=f"year_{year}"))
+    keyboard = ReplyKeyboardBuilder()
 
-    return keyboard.as_markup()
+    # Получаем текущий год
+    current_year = date.today().year
+    for year in range(current_year - 1, current_year + 1):  # Создаем диапазон лет
+        keyboard.add(KeyboardButton(text=str(year)))
+
+    return keyboard.adjust(2).as_markup(resize_keyboard=True)  # Настраиваем количество кнопок в строке

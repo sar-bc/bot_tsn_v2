@@ -1,4 +1,4 @@
-from sqlalchemy import select, and_, delete, case
+from sqlalchemy import select, and_, delete, case, func
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from database.models import *
 import os
@@ -355,3 +355,28 @@ class DataBase:
                 select(MeterDev).order_by(MeterDev.ls)
             )
             return result.scalars().all()
+
+    async def get_pokazaniya(self, mon: str, year: str):
+        async with self.Session() as session:
+            # Преобразуем месяц и год в целые числа
+            month = int(mon)  # Преобразование месяца в целое число
+            year = int(year)  # Преобразование года в целое число
+
+            # Выполняем запрос с условиями по месяцу и году
+            result = await session.execute(
+                select(Pokazaniya)
+                .where(
+                    func.strftime('%m', Pokazaniya.date) == f'{month:02d}',  # Форматируем месяц
+                    func.strftime('%Y', Pokazaniya.date) == str(year)  # Сравниваем год
+                )
+                .order_by(Pokazaniya.ls)
+            )
+            return result.scalars().all()
+
+    async def get_users_bot(self):
+        async with self.Session() as session:
+            result = await session.execute(
+                select(UsersBot)
+            )
+        return result.scalars().all()
+
