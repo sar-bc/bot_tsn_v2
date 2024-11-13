@@ -178,6 +178,7 @@ async def add_pokazaniya(callback: CallbackQuery, state: FSMContext):
     await state.update_data(ls=ls)
     await state.update_data(type_ipu=type_ipu)
     await state.update_data(last_input=previous_value)
+    await state.update_data(last_data=last.date)
     # await state.update_data(callback=callback)
     user_state.last_message_ids.append(sent_mess.message_id)
     await db.update_state(user_state)
@@ -205,22 +206,77 @@ async def priem_pokaz(message: Message, state: FSMContext):
         if data.get('last_input') != ' ':
             logger.info(f"ID_TG:{message.from_user.id}|У нас есть предыдущее показание, алгоритм проверки дальше")
 
-            if int(input_cur) >= int(data.get('last_input')):
-                logger.info(f"ID_TG:{message.from_user.id}|Значение в норме записываем в бд")
-                await state.clear()
-                # функция добавления или обновления показаний
-                await db.add_or_update_pokazaniya(data.get('ls'), data.get('kv'), data.get('type_ipu'), input_cur)
-                sent_mess = await message.answer(f"Показания приняты успешно!", reply_markup=await kb.inline_back(
-                    data.get('ls')))
-                user_state.last_message_ids.append(sent_mess.message_id)
-                await db.update_state(user_state)
+            if current_date == data.get('last_data'):
+                logger.info("ДАТЫ РАВНЫ")
+                # сдесь запрашиваем предпоследнее показание
+                last_pokazaniya = await db.get_pokazaniya_last_prev(
+                    int(data.get('ls')), data.get('last_data').strftime('%Y-%m-%d'))
+                if last_pokazaniya:
+                    # Получаем значение по полю, указанному в data.get('type_ipu')
+                    type_ipu = data.get('type_ipu')  # Получаем тип IPU
+                    value = None
+
+                    if type_ipu == 'hv':
+                        value = last_pokazaniya.hv  # Получаем значение поля hv
+                    elif type_ipu == 'gv':
+                        value = last_pokazaniya.gv  # Получаем значение поля gv
+                    elif type_ipu == 'e':
+                        value = last_pokazaniya.e  # Получаем значение поля e
+
+                    logger.info(f"last_pokazaniya: {type_ipu} = {value}")
+
+                    if int(input_cur) >= int(value):
+                        logger.info(f"ID_TG:{message.from_user.id}|Значение в норме записываем в бд")
+                        await state.clear()
+                        # функция добавления или обновления показаний
+                        await db.add_or_update_pokazaniya(data.get('ls'), data.get('kv'), data.get('type_ipu'),
+                                                          input_cur)
+                        sent_mess = await message.answer(f"Показания приняты успешно!",
+                                                         reply_markup=await kb.inline_back(
+                                                             data.get('ls')))
+                        user_state.last_message_ids.append(sent_mess.message_id)
+                        await db.update_state(user_state)
+                    else:
+                        logger.info(f"ID_TG:{message.from_user.id}|Ошибка значение меньше чем предыдущее")
+                        await message.answer("Введенное значение меньше предыдущего! Попробуйте еще раз:")
+
+                else:
+                    logger.info("Запись не найдена.")
+                    # функция добавления или обновления показаний
+                    await db.add_or_update_pokazaniya(data.get('ls'), data.get('kv'), data.get('type_ipu'), input_cur)
+                    sent_mess = await message.answer(f"Показания приняты успешно!", reply_markup=await kb.inline_back(
+                        data.get('ls')))
+                    user_state.last_message_ids.append(sent_mess.message_id)
+                    await db.update_state(user_state)
 
             else:
-                logger.info(f"ID_TG:{message.from_user.id}|Ошибка значение меньше чем предыдущее")
-                await message.answer("Введенное значение меньше предыдущего! Попробуйте еще раз:")
+                logger.info("ДАТЫ НЕ РАВНЫ")
+
+                if int(input_cur) >= int(data.get('last_input')):
+                    logger.info(f"ID_TG:{message.from_user.id}|Значение в норме записываем в бд")
+                    await state.clear()
+                    # функция добавления или обновления показаний
+                    await db.add_or_update_pokazaniya(data.get('ls'), data.get('kv'), data.get('type_ipu'), input_cur)
+                    sent_mess = await message.answer(f"Показания приняты успешно!", reply_markup=await kb.inline_back(
+                        data.get('ls')))
+                    user_state.last_message_ids.append(sent_mess.message_id)
+                    await db.update_state(user_state)
+
+                else:
+                    logger.info(f"ID_TG:{message.from_user.id}|Ошибка значение меньше чем предыдущее")
+                    await message.answer("Введенное значение меньше предыдущего! Попробуйте еще раз:")
+
         else:
             logger.info(f"ID_TG:{message.from_user.id}|НЕТ предыдущих показаний. Не с чем сравнивать, записываем в бд ")
             await state.clear()
+            # функция добавления или обновления показаний
+            await db.add_or_update_pokazaniya(data.get('ls'), data.get('kv'), data.get('type_ipu'),
+                                              input_cur)
+            sent_mess = await message.answer(f"Показания приняты успешно!",
+                                             reply_markup=await kb.inline_back(
+                                                 data.get('ls')))
+            user_state.last_message_ids.append(sent_mess.message_id)
+            await db.update_state(user_state)
             # функция добавления или обновления показаний
     else:
         logger.error(f"ID_TG:{message.from_user.id}|Вы ввели некорректное значение {display_type}!")

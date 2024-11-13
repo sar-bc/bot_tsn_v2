@@ -13,6 +13,7 @@ class AddPokazaniya(StatesGroup):
     kv = State()
     type_ipu = State()
     last_input = State()
+    last_data = State()
 
 
 class ImportUsers(StatesGroup):

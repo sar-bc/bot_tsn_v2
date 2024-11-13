@@ -380,3 +380,17 @@ class DataBase:
             )
         return result.scalars().all()
 
+    async def get_pokazaniya_last_prev(self, ls: int, target_date: str):
+        async with self.Session() as session:
+            result = await session.execute(
+                select(Pokazaniya)
+                .where(
+                    and_(
+                        Pokazaniya.ls == ls,
+                        Pokazaniya.date < target_date
+                    )
+                )
+                .order_by(Pokazaniya.date.desc())
+                .limit(1)
+            )
+            return result.scalars().first()  # Получаем первую запись или None
