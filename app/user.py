@@ -185,6 +185,8 @@ async def add_pokazaniya(callback: CallbackQuery, state: FSMContext):
 
 @user.message(AddPokazaniya.input)
 async def priem_pokaz(message: Message, state: FSMContext):
+    # Получаем текущую дату
+    current_date = date.today()
     db = DataBase()
     user_state = await db.get_state(message.from_user.id)
     await db.delete_messages(user_state)
@@ -199,8 +201,10 @@ async def priem_pokaz(message: Message, state: FSMContext):
     if input_cur.isdigit() and 1 <= len(input_cur) <= 8:
         logger.info(
             f"ID_TG:{message.from_user.id}|Проверку прошли число и длина. Ввели показания {display_type}:{input_cur}")
+
         if data.get('last_input') != ' ':
             logger.info(f"ID_TG:{message.from_user.id}|У нас есть предыдущее показание, алгоритм проверки дальше")
+
             if int(input_cur) >= int(data.get('last_input')):
                 logger.info(f"ID_TG:{message.from_user.id}|Значение в норме записываем в бд")
                 await state.clear()
