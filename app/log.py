@@ -18,13 +18,14 @@ class Loger:
     def __init__(self):
         self.loop = asyncio.get_event_loop()
         self.name_doc = __name__
-        self.db = DataBase()
+        # self.db = DataBase()
 
     def get_name_log(self, name_doc):
         self.name_doc = name_doc
 
     async def log_info(self, text: str):
-        await self.db.log_to_db("INFO", text, self.name_doc)
+        db = DataBase()
+        await db.log_to_db("INFO", text, self.name_doc)
         print(f"{datetime.now()} - {self.name_doc} - INFO - {text}")
 
     def run_log_info(self, text: str):
@@ -35,7 +36,8 @@ class Loger:
         threading.Thread(target=self.run_log_info, args=(text,)).start()
 
     async def log_error(self, text: str):
-        await self.db.log_to_db("ERROR", text, self.name_doc)
+        db = DataBase()
+        await db.log_to_db("ERROR", text, self.name_doc)
         print(f"{datetime.now()} - {self.name_doc} - ERROR - {text}")
 
     def run_log_error(self, text: str):

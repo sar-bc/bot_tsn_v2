@@ -2,7 +2,7 @@ import asyncio
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
-# import logging
+import logging
 from app.user import user
 from app.admin import admin
 from database.Database import DataBase

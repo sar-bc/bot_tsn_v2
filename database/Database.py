@@ -2,19 +2,20 @@ from sqlalchemy import select, and_, delete, case, func
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from database.models import *
 import os
-# import logging
+import logging
 from datetime import date
 from datetime import datetime
-from app.log import Loger
+# from app.log import Loger
 
-# Настройка логирования
-# logging.basicConfig(
-#     level=logging.INFO,
-#     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-# )
-# logger = logging.getLogger(__name__)
-logger = Loger()
-logger.get_name_log(__name__)
+# # Настройка логирования
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+)
+logger = logging.getLogger(__name__)
+
+# logger = Loger(Data)
+# logger.get_name_log(__name__)
 
 
 type_mapping = {
@@ -410,3 +411,7 @@ class DataBase:
             )
             session.add(log_entry)
             await session.commit()
+
+
+# logger = Loger(DataBase)
+# logger.get_name_log(__name__)
