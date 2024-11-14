@@ -6,11 +6,12 @@ from aiogram.filters import CommandStart, Command
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram import types
 import app.keyboards as kb
-import logging
+# import logging
 from app.states import ImportUsers, ImportIpu, ImportPokazaniya, ChoiceHomeUser, ExportPokazaniya, SendMess
 from database.Database import DataBase
 import csv
 from pathlib import Path
+from app.log import Loger
 
 type_mapping = {
     'hv': 'ХВС',
@@ -33,11 +34,14 @@ month_mapping = {
 }
 
 # Настройка логирования
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-)
-logger = logging.getLogger(__name__)
+# logging.basicConfig(
+#     level=logging.INFO,
+#     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+# )
+# logger = logging.getLogger(__name__)
+logger = Loger()
+logger.get_name_log(__name__)
+
 
 admin = Router()
 

@@ -2,20 +2,22 @@ import asyncio
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
-import logging
+# import logging
 from app.user import user
 from app.admin import admin
 from database.Database import DataBase
 from dotenv import load_dotenv
 import os
+from app.log import Loger
 
-# Настройка логирования
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-)
-logger = logging.getLogger(__name__)
-
+# # Настройка логирования
+# logging.basicConfig(
+#     level=logging.INFO,
+#     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+# )
+# logger = logging.getLogger(__name__)
+logger = Loger()
+logger.get_name_log(__name__)
 # Загружаем переменные окружения
 load_dotenv()
 

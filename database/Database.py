@@ -2,16 +2,21 @@ from sqlalchemy import select, and_, delete, case, func
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from database.models import *
 import os
-import logging
+# import logging
 from datetime import date
 from datetime import datetime
+from app.log import Loger
 
 # Настройка логирования
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-)
-logger = logging.getLogger(__name__)
+# logging.basicConfig(
+#     level=logging.INFO,
+#     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+# )
+# logger = logging.getLogger(__name__)
+logger = Loger()
+logger.get_name_log(__name__)
+
+
 type_mapping = {
     'hv': 'ХВС',
     'gv': 'ГВС',
@@ -394,3 +399,14 @@ class DataBase:
                 .limit(1)
             )
             return result.scalars().first()  # Получаем первую запись или None
+
+    async def log_to_db(self, level: str, message: str, logger_name: str):
+        async with self.Session() as session:
+            log_entry = Logs(
+                timestamp=datetime.now(),  # Здесь можете использовать datetime.now().isoformat() для меток времени
+                name=logger_name,
+                level=level,
+                message=message
+            )
+            session.add(log_entry)
+            await session.commit()

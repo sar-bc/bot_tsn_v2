@@ -1,39 +1,3 @@
  https://api.telegram.org/bot{TOKEN}/deleteWebhook
  Lesson (https://www.youtube.com/watch?v=i07-M7m13bM&list=PLV0FNhq3XMOJ31X9eBWLIZJ4OVjBwb-KM)
  ====================================================
- class Users(Base):
-    __tablename__ = 'Users'  # Исправлено на __tablename__
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    ls = Column(Integer, nullable=False, unique=True)
-    home = Column(Integer, nullable=False)
-    kv = Column(Integer, nullable=False)
-    address = Column(Text)
-    meters = relationship('MeterDev', back_populates='user')
-
-    def __repr__(self):  # Исправлено на __repr__
-        return f"<Users(id={self.id}, ls={self.ls}, home={self.home}, kv={self.kv}, address='{self.address}')>"
-
-####################################
-class MeterDev(Base):
-    __tablename__ = 'MeterDev'  # Исправлено на __tablename__
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    ls = Column(Integer, ForeignKey('Users.ls'), nullable=False)
-    name = Column(String(250), nullable=True, default='')
-    number = Column(String(100), unique=True, nullable=True, default='')
-    data_pov_next = Column(Date, nullable=True)
-    location = Column(String(50), nullable=True, default='')
-    type = Column(String(3), default='hv', nullable=False)
-
-    __table_args__ = (
-        CheckConstraint("type IN ('hv', 'gv', 'e')", name="check_type"),
-    )
-    # Связь с пользователем
-    user = relationship('Users', back_populates='meters')
-
-    def __repr__(self):  # Определение метода __repr__
-        return (f"<MeterDev(id={self.id}, ls={self.ls}, name='{self.name}', "
-                f"number='{self.number}', data_pov_next='{self.data_pov_next}', "
-                f"type='{self.type}')>")
- ====================================================

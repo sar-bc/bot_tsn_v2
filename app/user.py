@@ -3,19 +3,23 @@ from aiogram.types import Message, CallbackQuery
 from aiogram.filters import CommandStart, Command
 from app.middlewares import CounterMiddleware
 import app.keyboards as kb
-import logging
+# import logging
 from aiogram.fsm.context import FSMContext
 from app.states import AddLs, AddPokazaniya
 from typing import Any, Dict
 from database.Database import DataBase
 from datetime import date
+from app.log import Loger
 
 # Настройка логирования
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-)
-logger = logging.getLogger(__name__)
+# logging.basicConfig(
+#     level=logging.INFO,
+#     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+# )
+# logger = logging.getLogger(__name__)
+logger = Loger()
+logger.get_name_log(__name__)
+
 user = Router()
 
 user.message.middleware(CounterMiddleware())
@@ -29,6 +33,7 @@ type_mapping = {
 
 @user.message(CommandStart())
 async def cmd_start(message: Message, state: FSMContext):
+    # await logger.log_info(f'ID_TG:{message.from_user.id}|Команда старт')
     logger.info(f'ID_TG:{message.from_user.id}|Команда старт')
     await state.clear()
     db = DataBase()
