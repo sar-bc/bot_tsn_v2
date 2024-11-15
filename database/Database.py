@@ -27,7 +27,15 @@ type_mapping = {
 
 class DataBase:
     def __init__(self):
-        self.connect = os.getenv('DB_URL')
+        # self.connect = 'sqlite+aiosqlite:///db.sqlite3'
+        # self.async_engine = create_async_engine(url=self.connect, echo=False)
+        # self.Session = async_sessionmaker(bind=self.async_engine, class_=AsyncSession)
+        self.db_host = os.getenv('DB_HOST')
+        self.db_user = os.getenv('DB_USER')
+        self.db_password = os.getenv('DB_PASSWORD')
+        self.db_name = os.getenv('DB_NAME')
+        self.connect = (f'mysql+aiomysql://{self.db_user}:{self.db_password}@{self.db_host}/'
+                        f'{self.db_name}?charset=utf8mb4')
         self.async_engine = create_async_engine(url=self.connect, echo=False)
         self.Session = async_sessionmaker(bind=self.async_engine, class_=AsyncSession)
 
