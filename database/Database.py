@@ -5,6 +5,7 @@ import os
 import logging
 from datetime import date
 from datetime import datetime
+
 # from app.log import Loger
 
 # # Настройка логирования
@@ -370,6 +371,22 @@ class DataBase:
             )
             return result.scalars().all()
 
+    # async def get_pokazaniya(self, mon: str, year: str):
+    #     async with self.Session() as session:
+    #         # Преобразуем месяц и год в целые числа
+    #         month = int(mon)  # Преобразование месяца в целое число
+    #         year = int(year)  # Преобразование года в целое число
+    #
+    #         # Выполняем запрос с условиями по месяцу и году
+    #         result = await session.execute(
+    #             select(Pokazaniya)
+    #             .where(
+    #                 func.DATE_FORMAT(Pokazaniya.date, '%m') == f'{month:02d}',  # Форматируем месяц
+    #                 func.DATE_FORMAT(Pokazaniya.date, '%Y') == str(year)  # Сравниваем год
+    #             )
+    #             .order_by(Pokazaniya.ls)
+    #         )
+    #         return result.scalars().all()
     async def get_pokazaniya(self, mon: str, year: str):
         async with self.Session() as session:
             # Преобразуем месяц и год в целые числа
@@ -377,14 +394,25 @@ class DataBase:
             year = int(year)  # Преобразование года в целое число
 
             # Выполняем запрос с условиями по месяцу и году
+            subquery = (
+                select(
+                    Pokazaniya.ls,
+                    func.max(Pokazaniya.date).label('latest_date')
+                )
+                .where(
+                    func.DATE_FORMAT(Pokazaniya.date, '%m') == f'{month:02d}',  # Форматируем месяц
+                    func.DATE_FORMAT(Pokazaniya.date, '%Y') == str(year)  # Сравниваем год
+                )
+                .group_by(Pokazaniya.ls)
+            ).subquery()
+
+            # Запрос для получения полных записей с последней датой
             result = await session.execute(
                 select(Pokazaniya)
-                .where(
-                    func.strftime('%m', Pokazaniya.date) == f'{month:02d}',  # Форматируем месяц
-                    func.strftime('%Y', Pokazaniya.date) == str(year)  # Сравниваем год
-                )
+                .join(subquery, (Pokazaniya.ls == subquery.c.ls) & (Pokazaniya.date == subquery.c.latest_date))
                 .order_by(Pokazaniya.ls)
             )
+
             return result.scalars().all()
 
     async def get_users_bot(self):
@@ -419,7 +447,6 @@ class DataBase:
             )
             session.add(log_entry)
             await session.commit()
-
 
 # logger = Loger(DataBase)
 # logger.get_name_log(__name__)

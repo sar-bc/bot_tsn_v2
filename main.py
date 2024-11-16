@@ -39,11 +39,11 @@ async def main():
 async def startup(dispatcher: Dispatcher):
     db = DataBase()
     await db.create_db()
-    logger.info('Starting up...')
+    await logger.info('Starting up...')
 
 
 async def shutdown(dispatcher: Dispatcher):
-    logger.info('Shutting down...')
+    await logger.info('Shutting down...')
 
 
 if __name__ == '__main__':

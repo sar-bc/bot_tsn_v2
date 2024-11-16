@@ -33,8 +33,7 @@ type_mapping = {
 
 @user.message(CommandStart())
 async def cmd_start(message: Message, state: FSMContext):
-    # await logger.log_info(f'ID_TG:{message.from_user.id}|Команда старт')
-    logger.info(f'ID_TG:{message.from_user.id}|Команда старт')
+    await logger.info(f'ID_TG:{message.from_user.id}|Команда старт')
     await state.clear()
     db = DataBase()
     user_state = await db.get_state(message.from_user.id)
@@ -49,13 +48,13 @@ async def process_ls(message: Message, state: FSMContext):
         try:
             await state.update_data(ls=int(message.text))
             await state.set_state(AddLs.kv)
-            logger.info(f'ID_TG:{message.from_user.id}|Переходим к вводу квартиры')
+            await logger.info(f'ID_TG:{message.from_user.id}|Переходим к вводу квартиры')
             await message.answer("Очень хорошо! Теперь введите номер квартиры (не более 3 символов).")
         except ValueError:
-            logger.error(f'ID_TG:{message.from_user.id}|Введеный лицевой не является числом')
+            await logger.error(f'ID_TG:{message.from_user.id}|Введеный лицевой не является числом')
             await message.answer("Вы ввели некорректное значение! Введите номер лицевого счета еще раз")
     else:
-        logger.error(f'ID_TG:{message.from_user.id}|Неправильная длина лицевого')
+        await logger.error(f'ID_TG:{message.from_user.id}|Неправильная длина лицевого')
         await message.answer("Вы ввели некорректное значение! Введите номер лицевого счета еще раз")
 
 
@@ -65,14 +64,14 @@ async def process_kv(message: Message, state: FSMContext):
         try:
             data = await state.update_data(kv=int(message.text))
             await state.clear()
-            logger.info(f'ID_TG:{message.from_user.id}|Переходим к поиску лицевого')
+            await logger.info(f'ID_TG:{message.from_user.id}|Переходим к поиску лицевого')
             await message.answer("Подождите, идёт поиск и привязка лицевого счета..")
             await check_ls(message=message, data=data)
         except ValueError:
-            logger.error(f'ID_TG:{message.from_user.id}|Введенная квартира не является числом')
+            await logger.error(f'ID_TG:{message.from_user.id}|Введенная квартира не является числом')
             await message.answer("Вы ввели некорректное значение! Введите номер квартиры еще раз")
     else:
-        logger.error(f'ID_TG:{message.from_user.id}|Неправильная длина квартиры')
+        await logger.error(f'ID_TG:{message.from_user.id}|Неправильная длина квартиры')
         await message.answer("Вы ввели некорректное значение! Введите номер квартиры еще раз")
 
 
@@ -90,13 +89,13 @@ async def add_ls(callback: CallbackQuery, state: FSMContext):
 @user.callback_query(F.data.startswith('show_ls:'))
 async def show_ls(callback: CallbackQuery, state: FSMContext):
     await state.clear()
-    logger.info(f"ID_TG:{callback.from_user.id}|state.get_state()=>{await state.get_state()}")
+    await logger.info(f"ID_TG:{callback.from_user.id}|state.get_state()=>{await state.get_state()}")
     db = DataBase()
     user_state = await db.get_state(callback.from_user.id)
     await db.delete_messages(user_state)
     await callback.answer()
     ls = int(callback.data.split(':')[1])
-    logger.info(f'ID_TG:{callback.from_user.id}|callback_show_ls:{ls}')
+    await logger.info(f'ID_TG:{callback.from_user.id}|callback_show_ls:{ls}')
     await callback.message.answer("Получение списка счётчиков... ожидайте.")
     ipu = await db.get_ipu(ls)
     if not ipu:
@@ -117,7 +116,7 @@ async def all_ls_call(callback: CallbackQuery):
     user_bot = await db.get_userbot(callback.from_user.id)
     user_state = await db.get_state(callback.from_user.id)
     await db.delete_messages(user_state)
-    logger.info(f'ID_TG:{callback.from_user.id}|all_ls_call:user_id={callback.from_user.id}')
+    await logger.info(f'ID_TG:{callback.from_user.id}|all_ls_call:user_id={callback.from_user.id}')
     sent_mess = await callback.message.answer(text='Выберите Лицевой счёт из списка, либо добавьте новый',
                                               reply_markup=await kb.inline_ls(user_bot))
     user_state.last_message_ids.append(sent_mess.message_id)
@@ -131,7 +130,7 @@ async def del_ls(callback: CallbackQuery):
     users = await db.get_user_ls(ls)
     user_state = await db.get_state(callback.from_user.id)
     await db.delete_messages(user_state)
-    logger.info(f"ID_TG:{callback.from_user.id}|Поступил запрос на удаление лицевого {ls}")
+    await logger.info(f"ID_TG:{callback.from_user.id}|Поступил запрос на удаление лицевого {ls}")
     sent_mess = await callback.message.answer(f"Вы точно хотите отвязать Лицевой счет?\n"
                                               f"Счет № {ls}\n"
                                               f"Адрес: {users.address}", reply_markup=await kb.inline_del_ls(ls))
@@ -162,7 +161,7 @@ async def add_pokazaniya(callback: CallbackQuery, state: FSMContext):
     ls = int(callback.data.split(':')[1])
     type_ipu = callback.data.split(':')[2]
     last = await db.get_pokazaniya_last(ls, type_ipu)
-    logger.info(f"ID_TG:{callback.from_user.id}|get_pokazaniya_last:{last}")
+    await logger.info(f"ID_TG:{callback.from_user.id}|get_pokazaniya_last:{last}")
     data_display = last.date.strftime("(%d-%m-%Y)") if last is not None else ' '
     previous_value = getattr(last, type_ipu) if last is not None else ' '
     address = await db.get_address(ls)
@@ -202,17 +201,17 @@ async def priem_pokaz(message: Message, state: FSMContext):
     display_type = type_mapping.get(data.get('type_ipu'), data.get('type_ipu'))
     await db.delete_messages(user_state)
     input_cur = message.text
-    logger.info(f"ID_TG:{message.from_user.id}|data:{data}")
+    await logger.info(f"ID_TG:{message.from_user.id}|data:{data}")
     await message.answer(f"Введено показание {display_type}: {input_cur}... ожидайте")
     if input_cur.isdigit() and 1 <= len(input_cur) <= 8:
-        logger.info(
+        await logger.info(
             f"ID_TG:{message.from_user.id}|Проверку прошли число и длина. Ввели показания {display_type}:{input_cur}")
 
         if data.get('last_input') != ' ':
-            logger.info(f"ID_TG:{message.from_user.id}|У нас есть предыдущее показание, алгоритм проверки дальше")
+            await logger.info(f"ID_TG:{message.from_user.id}|У нас есть предыдущее показание, алгоритм проверки дальше")
 
             if current_date == data.get('last_data'):
-                logger.info("ДАТЫ РАВНЫ")
+                await logger.info("ДАТЫ РАВНЫ")
                 # сдесь запрашиваем предпоследнее показание
                 last_pokazaniya = await db.get_pokazaniya_last_prev(
                     int(data.get('ls')), data.get('last_data').strftime('%Y-%m-%d'))
@@ -228,10 +227,10 @@ async def priem_pokaz(message: Message, state: FSMContext):
                     elif type_ipu == 'e':
                         value = last_pokazaniya.e  # Получаем значение поля e
 
-                    logger.info(f"last_pokazaniya: {type_ipu} = {value}")
+                    await logger.info(f"last_pokazaniya: {type_ipu} = {value}")
 
                     if int(input_cur) >= int(value):
-                        logger.info(f"ID_TG:{message.from_user.id}|Значение в норме записываем в бд")
+                        await logger.info(f"ID_TG:{message.from_user.id}|Значение в норме записываем в бд")
                         await state.clear()
                         # функция добавления или обновления показаний
                         await db.add_or_update_pokazaniya(data.get('ls'), data.get('kv'), data.get('type_ipu'),
@@ -242,11 +241,11 @@ async def priem_pokaz(message: Message, state: FSMContext):
                         user_state.last_message_ids.append(sent_mess.message_id)
                         await db.update_state(user_state)
                     else:
-                        logger.info(f"ID_TG:{message.from_user.id}|Ошибка значение меньше чем предыдущее")
+                        await logger.info(f"ID_TG:{message.from_user.id}|Ошибка значение меньше чем предыдущее")
                         await message.answer("Введенное значение меньше предыдущего! Попробуйте еще раз:")
 
                 else:
-                    logger.info("Запись не найдена.")
+                    await logger.info("Запись не найдена.")
                     # функция добавления или обновления показаний
                     await db.add_or_update_pokazaniya(data.get('ls'), data.get('kv'), data.get('type_ipu'), input_cur)
                     sent_mess = await message.answer(f"Показания приняты успешно!", reply_markup=await kb.inline_back(
@@ -255,10 +254,10 @@ async def priem_pokaz(message: Message, state: FSMContext):
                     await db.update_state(user_state)
 
             else:
-                logger.info("ДАТЫ НЕ РАВНЫ")
+                await logger.info("ДАТЫ НЕ РАВНЫ")
 
                 if int(input_cur) >= int(data.get('last_input')):
-                    logger.info(f"ID_TG:{message.from_user.id}|Значение в норме записываем в бд")
+                    await logger.info(f"ID_TG:{message.from_user.id}|Значение в норме записываем в бд")
                     await state.clear()
                     # функция добавления или обновления показаний
                     await db.add_or_update_pokazaniya(data.get('ls'), data.get('kv'), data.get('type_ipu'), input_cur)
@@ -268,11 +267,11 @@ async def priem_pokaz(message: Message, state: FSMContext):
                     await db.update_state(user_state)
 
                 else:
-                    logger.info(f"ID_TG:{message.from_user.id}|Ошибка значение меньше чем предыдущее")
+                    await logger.info(f"ID_TG:{message.from_user.id}|Ошибка значение меньше чем предыдущее")
                     await message.answer("Введенное значение меньше предыдущего! Попробуйте еще раз:")
 
         else:
-            logger.info(f"ID_TG:{message.from_user.id}|НЕТ предыдущих показаний. Не с чем сравнивать, записываем в бд ")
+            await logger.info(f"ID_TG:{message.from_user.id}|НЕТ предыдущих показаний. Не с чем сравнивать, записываем в бд ")
             await state.clear()
             # функция добавления или обновления показаний
             await db.add_or_update_pokazaniya(data.get('ls'), data.get('kv'), data.get('type_ipu'),
@@ -284,7 +283,7 @@ async def priem_pokaz(message: Message, state: FSMContext):
             await db.update_state(user_state)
             # функция добавления или обновления показаний
     else:
-        logger.error(f"ID_TG:{message.from_user.id}|Вы ввели некорректное значение {display_type}!")
+        await logger.error(f"ID_TG:{message.from_user.id}|Вы ввели некорректное значение {display_type}!")
         await message.answer("Вы ввели некорректное значение! Попробуйте еще раз:")
 
 
@@ -297,7 +296,7 @@ async def priem_pokaz(message: Message, state: FSMContext):
 
 #  ####### FUNCTION ###################
 async def all_ls(state, message):
-    logger.info(f'ID_TG:{message.from_user.id}|all_ls:user_id={state.user_id}')
+    await logger.info(f'ID_TG:{message.from_user.id}|all_ls:user_id={state.user_id}')
     db = DataBase()
     user_bot = await db.get_userbot(state.user_id)
     sent_mess = await message.answer(text='Выберите Лицевой счёт из списка, либо добавьте новый',
@@ -309,10 +308,10 @@ async def all_ls(state, message):
 # ############
 async def check_ls(message: Message, data: Dict[str, Any]):
     db = DataBase()
-    logger.info(f"ID_TG:{message.from_user.id}|check_ls:{data['ls']};kv:{data['kv']}")
+    await logger.info(f"ID_TG:{message.from_user.id}|check_ls:{data['ls']};kv:{data['kv']}")
     u = await db.get_users(data['ls'], data['kv'])
     if u:
-        logger.info(f'ID_TG:{message.from_user.id}|такой юзер есть:{u}')
+        await logger.info(f'ID_TG:{message.from_user.id}|такой юзер есть:{u}')
         if await db.get_userbot_ls(u.ls):
             await message.answer(f"⛔ Лицевой счет уже добавлен!")
         else:
@@ -331,7 +330,7 @@ async def check_ls(message: Message, data: Dict[str, Any]):
                 await message.answer('❌ Не удалось добавить лицевой счет! Обратитесь в офис ТСН')
 
     else:
-        logger.error(f'ID_TG:{message.from_user.id}|такого юзере НЕТ')
+        await logger.error(f'ID_TG:{message.from_user.id}|такого юзере НЕТ')
         await message.answer('❌ Не удалось найти указанный лицевой счет! Обратитесь в офис ТСН')
         user_state = await db.get_state(message.from_user.id)
         await all_ls(user_state, message)
