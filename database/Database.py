@@ -68,9 +68,12 @@ class DataBase:
             result = await session.execute(select(UsersBot).where(UsersBot.id_tg == tg))
             return result.scalars()
 
-    async def get_userbot_ls(self, ls: int):
+    async def get_userbot_ls(self, ls: int, id_tg):
         async with self.Session() as session:
-            result = await session.execute(select(UsersBot).where(UsersBot.ls == ls))
+            result = await session.execute(
+                select(UsersBot)
+                .where(and_(UsersBot.ls == ls, UsersBot.id_tg == id_tg))
+            )
             return result.scalar()
 
     async def update_state(self, state: UserState):

@@ -312,8 +312,10 @@ async def check_ls(message: Message, data: Dict[str, Any]):
     u = await db.get_users(data['ls'], data['kv'])
     if u:
         await logger.info(f'ID_TG:{message.from_user.id}|такой юзер есть:{u}')
-        if await db.get_userbot_ls(u.ls):
+        if await db.get_userbot_ls(u.ls, message.from_user.id):
             await message.answer(f"⛔ Лицевой счет уже добавлен!")
+            user_state = await db.get_state(message.from_user.id)
+            await all_ls(user_state, message)
         else:
             # await db.create_userbot(id_tg=message.from_user.id, ls=u.ls, home=u.home, kv=u.kv)
             kwargs = {
