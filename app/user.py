@@ -95,8 +95,10 @@ async def show_ls(callback: CallbackQuery, state: FSMContext):
     await db.delete_messages(user_state)
     await callback.answer()
     ls = int(callback.data.split(':')[1])
+    await logger.info(f'ID_TG:{callback.from_user.id}|show_ls_f:ls{ls}')
     await logger.info(f'ID_TG:{callback.from_user.id}|callback_show_ls:{ls}')
     await callback.message.answer("Получение списка счётчиков... ожидайте.")
+    db = DataBase()
     ipu = await db.get_ipu(ls)
     if not ipu:
         await callback.message.answer(f"❌ На лицевом счете №{ls} не найдены приборы учета❗️")
@@ -261,6 +263,7 @@ async def priem_pokaz(message: Message, state: FSMContext):
                                                                  data.get('ls')))
                             user_state.last_message_ids.append(sent_mess.message_id)
                             await db.update_state(user_state)
+
                         else:
                             await logger.info(f"ID_TG:{message.from_user.id}|Ошибка значение меньше чем предыдущее")
                             await message.answer("Введенное значение меньше предыдущего! Попробуйте еще раз:")
@@ -326,6 +329,27 @@ async def priem_pokaz(message: Message, state: FSMContext):
 # Если в базе нет сведений о предыдущем показании значит проверяем только на число и длину от 1 до 8 и записываем в базу
 
 #  ####### FUNCTION ###################
+
+# async def show_ls_f(callback):
+#     ls = int(callback.data.split(':')[1])
+#     await logger.info(f'ID_TG:{callback.from_user.id}|show_ls_f:ls{ls}')
+#     await logger.info(f'ID_TG:{callback.from_user.id}|callback_show_ls:{ls}')
+#     await callback.message.answer("Получение списка счётчиков... ожидайте.")
+#     db = DataBase()
+#     ipu = await db.get_ipu(ls)
+#     if not ipu:
+#         await callback.message.answer(f"❌ На лицевом счете №{ls} не найдены приборы учета❗️")
+#     users = await db.get_address(ls)
+#     user_state = await db.get_state(callback.from_user.id)
+#     sent_mess = await callback.message.answer(f"Лицевой счет № {ls}\n"
+#                                               f"Адрес: {users.address}\n"
+#                                               f"Выберите прибор учета из списка",
+#                                               reply_markup=await kb.inline_show_ipu(ls, ipu))
+#     user_state.last_message_ids.append(sent_mess.message_id)
+#     await db.update_state(user_state)
+
+###########################################
+
 async def all_ls(state, message):
     await logger.info(f'ID_TG:{message.from_user.id}|all_ls:user_id={state.user_id}')
     db = DataBase()

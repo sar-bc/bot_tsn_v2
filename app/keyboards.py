@@ -25,9 +25,9 @@ async def inline_show_ipu(ls: int, ipu):
         current_date = date.today()
         db = DataBase()
         last = await db.get_pokazaniya_last_ls(ls)
-        print(f"last_keyboard={last}")
+        # print(f"last_keyboard={last}")
         for i in ipu:
-            print(f"i={i}")
+            # print(f"i={i}")
             display_type = type_mapping.get(i.type, i.type)
             display_new = " "
             if i.type == 'hv' and last.hv is not None and last.date == current_date:
