@@ -374,22 +374,21 @@ class DataBase:
             )
             return result.scalars().all()
 
-    # async def get_pokazaniya(self, mon: str, year: str):
-    #     async with self.Session() as session:
-    #         # Преобразуем месяц и год в целые числа
-    #         month = int(mon)  # Преобразование месяца в целое число
-    #         year = int(year)  # Преобразование года в целое число
-    #
-    #         # Выполняем запрос с условиями по месяцу и году
-    #         result = await session.execute(
-    #             select(Pokazaniya)
-    #             .where(
-    #                 func.DATE_FORMAT(Pokazaniya.date, '%m') == f'{month:02d}',  # Форматируем месяц
-    #                 func.DATE_FORMAT(Pokazaniya.date, '%Y') == str(year)  # Сравниваем год
-    #             )
-    #             .order_by(Pokazaniya.ls)
-    #         )
-    #         return result.scalars().all()
+    async def get_ipu_type(self, ls, type_ipu):
+        async with self.Session() as session:
+            result = await session.execute(
+                select(MeterDev).where(and_(MeterDev.ls == ls, MeterDev.type == type_ipu))
+            )
+            return result.scalars().first()
+
+    async def get_pokazaniya_last_ls(self, ls: int):
+        async with self.Session() as session:
+            result = await session.execute(
+                select(Pokazaniya).filter(Pokazaniya.ls == ls)
+                .order_by(Pokazaniya.date.desc())
+            )
+            return result.scalars().first()
+
     async def get_pokazaniya(self, mon: str, year: str):
         async with self.Session() as session:
             # Преобразуем месяц и год в целые числа
@@ -439,6 +438,16 @@ class DataBase:
                 .limit(1)
             )
             return result.scalars().first()  # Получаем первую запись или None
+
+    async def get_pokazaniya_field(self, ls: int, type_ipu: str):
+        async with self.Session() as session:
+            result = await session.execute(
+                select(getattr(Pokazaniya, type_ipu)).where(
+                    Pokazaniya.ls == ls,
+                    Pokazaniya.date < datetime.today().date()
+                ).order_by(Pokazaniya.date.desc()).limit(1)
+            )
+            return result.scalar()
 
     async def log_to_db(self, level: str, message: str, logger_name: str):
         async with self.Session() as session:

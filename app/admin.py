@@ -411,6 +411,7 @@ async def export_pokazaniya_to_csv(file_path, month, year):
 
     db = DataBase()
     results = await db.get_pokazaniya(month_number, year)
+    # print(f"results={results}")
     if not results:
         return False
 

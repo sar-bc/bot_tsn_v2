@@ -160,22 +160,43 @@ async def add_pokazaniya(callback: CallbackQuery, state: FSMContext):
     await db.delete_messages(user_state)
     ls = int(callback.data.split(':')[1])
     type_ipu = callback.data.split(':')[2]
+    # смотрим последнее показание
     last = await db.get_pokazaniya_last(ls, type_ipu)
+    # print(f"last={last}")
+    # запрашиваем данные счетчика
+    ipu = await db.get_ipu_type(ls, type_ipu)
+    # print(f"ipu={ipu}")
+    ipu_number = f", {ipu.number} {ipu.location if len(ipu.location)>1 else ''}" if len(ipu.number) > 4 else ''
     await logger.info(f"ID_TG:{callback.from_user.id}|get_pokazaniya_last:{last}")
-    data_display = last.date.strftime("(%d-%m-%Y)") if last is not None else ' '
     previous_value = getattr(last, type_ipu) if last is not None else ' '
+    # print(f"previous_value={previous_value}")
+    # запрашиваем адрес
     address = await db.get_address(ls)
+    # print(f"address={address}")
     display_type = type_mapping.get(type_ipu, type_ipu)
+    # запрашиваем предыдущие показания
+    # prev_val = await db.get_pokazaniya_field(ls, type_ipu)
+    # print(f"prev_val={prev_val}")
+    # сдесь запрашиваем предпоследнее показание
+    last_pokazaniya = await db.get_pokazaniya_last_prev(int(ls), current_date)
+    # prev_val = getattr(last_pokazaniya, type_ipu)
+    prev = getattr(last_pokazaniya, type_ipu)
+    prev_val = f"{prev}" if prev is not None else '-'
+    # print(f"prev_val={prev_val}")
+    # print(f"last_pokazaniya={last_pokazaniya}")
+
     previous_display = (
-        f"Предыдущее: {previous_value}  {'🆕' if last.date == current_date else ''}{data_display}\n"
-        if last is not None else ''
+        f"Предыдущее: {prev_val} ({last_pokazaniya.date.strftime('%d-%m-%Y')})\n" if (last is not None) and (prev is not None) else ''
     )
-    sent_mess = await callback.message.answer(
-        f"Прибор учета: {display_type}\n"
-        f"{previous_display}"
-        f"Введите текущее показание ниже:",
-        reply_markup=await kb.inline_back(ls)
+    display_new =(
+        f"Введено: {getattr(last, type_ipu)} (можно изменить)\n" if last.date == current_date else ''
     )
+    mess = (f"Прибор учета: {display_type}{ipu_number}\n"
+            f"{previous_display}"
+            f"{display_new}"
+            f"Введите ниже текущее показание:")
+    # print(mess)
+    sent_mess = await callback.message.answer(mess, reply_markup=await kb.inline_back(ls))
 
     await state.set_state(AddPokazaniya.input)
     await state.update_data(kv=address.kv)
@@ -183,7 +204,6 @@ async def add_pokazaniya(callback: CallbackQuery, state: FSMContext):
     await state.update_data(type_ipu=type_ipu)
     await state.update_data(last_input=previous_value)
     await state.update_data(last_data=last.date)
-    # await state.update_data(callback=callback)
     user_state.last_message_ids.append(sent_mess.message_id)
     await db.update_state(user_state)
 
@@ -228,21 +248,27 @@ async def priem_pokaz(message: Message, state: FSMContext):
                         value = last_pokazaniya.e  # Получаем значение поля e
 
                     await logger.info(f"last_pokazaniya: {type_ipu} = {value}")
-
-                    if int(input_cur) >= int(value):
-                        await logger.info(f"ID_TG:{message.from_user.id}|Значение в норме записываем в бд")
-                        await state.clear()
-                        # функция добавления или обновления показаний
-                        await db.add_or_update_pokazaniya(data.get('ls'), data.get('kv'), data.get('type_ipu'),
-                                                          input_cur)
-                        sent_mess = await message.answer(f"Показания приняты успешно!",
-                                                         reply_markup=await kb.inline_back(
-                                                             data.get('ls')))
-                        user_state.last_message_ids.append(sent_mess.message_id)
-                        await db.update_state(user_state)
-                    else:
-                        await logger.info(f"ID_TG:{message.from_user.id}|Ошибка значение меньше чем предыдущее")
-                        await message.answer("Введенное значение меньше предыдущего! Попробуйте еще раз:")
+                    value = value if value is not None else '0'
+                    try:
+                        if int(input_cur) >= int(value):
+                            await logger.info(f"ID_TG:{message.from_user.id}|Значение в норме записываем в бд")
+                            await state.clear()
+                            # функция добавления или обновления показаний
+                            await db.add_or_update_pokazaniya(data.get('ls'), data.get('kv'), data.get('type_ipu'),
+                                                              input_cur)
+                            sent_mess = await message.answer(f"Показания приняты успешно!",
+                                                             reply_markup=await kb.inline_back(
+                                                                 data.get('ls')))
+                            user_state.last_message_ids.append(sent_mess.message_id)
+                            await db.update_state(user_state)
+                        else:
+                            await logger.info(f"ID_TG:{message.from_user.id}|Ошибка значение меньше чем предыдущее")
+                            await message.answer("Введенное значение меньше предыдущего! Попробуйте еще раз:")
+                    except ValueError:
+                        await logger.error(f"ID_TG:{message.from_user.id}|Ошибка значение - сравниваемые показания ("
+                                           f"разные типы)")
+                        await message.answer("❌ Ошибка!")
+                        await all_ls(user_state, message)
 
                 else:
                     await logger.info("Запись не найдена.")
@@ -255,20 +281,25 @@ async def priem_pokaz(message: Message, state: FSMContext):
 
             else:
                 await logger.info("ДАТЫ НЕ РАВНЫ")
+                try:
+                    if int(input_cur) >= int(data.get('last_input')):
+                        await logger.info(f"ID_TG:{message.from_user.id}|Значение в норме записываем в бд")
+                        await state.clear()
+                        # функция добавления или обновления показаний
+                        await db.add_or_update_pokazaniya(data.get('ls'), data.get('kv'), data.get('type_ipu'), input_cur)
+                        sent_mess = await message.answer(f"Показания приняты успешно!", reply_markup=await kb.inline_back(
+                            data.get('ls')))
+                        user_state.last_message_ids.append(sent_mess.message_id)
+                        await db.update_state(user_state)
 
-                if int(input_cur) >= int(data.get('last_input')):
-                    await logger.info(f"ID_TG:{message.from_user.id}|Значение в норме записываем в бд")
-                    await state.clear()
-                    # функция добавления или обновления показаний
-                    await db.add_or_update_pokazaniya(data.get('ls'), data.get('kv'), data.get('type_ipu'), input_cur)
-                    sent_mess = await message.answer(f"Показания приняты успешно!", reply_markup=await kb.inline_back(
-                        data.get('ls')))
-                    user_state.last_message_ids.append(sent_mess.message_id)
-                    await db.update_state(user_state)
-
-                else:
-                    await logger.info(f"ID_TG:{message.from_user.id}|Ошибка значение меньше чем предыдущее")
-                    await message.answer("Введенное значение меньше предыдущего! Попробуйте еще раз:")
+                    else:
+                        await logger.info(f"ID_TG:{message.from_user.id}|Ошибка значение меньше чем предыдущее")
+                        await message.answer("Введенное значение меньше предыдущего! Попробуйте еще раз:")
+                except ValueError:
+                    await logger.error(f"ID_TG:{message.from_user.id}|Ошибка значение - сравниваемые показания ("
+                                       f"разные типы)")
+                    await message.answer("❌ Ошибка!")
+                    await all_ls(user_state, message)
 
         else:
             await logger.info(f"ID_TG:{message.from_user.id}|НЕТ предыдущих показаний. Не с чем сравнивать, записываем в бд ")
