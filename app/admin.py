@@ -382,8 +382,8 @@ async def process_send(message: Message, state: FSMContext):
     result = await db.get_users_bot()
 
     if result:
-        await send_mess(result, mess_text)
-        await message.answer("✅ Сообщение успешно отправлено.")
+        res = await send_mess(result, mess_text)
+        await message.answer(f"✅ Сообщение успешно отправлено. {res}шт")
         await logger.info(f'ID_TG:{message.from_user.id}|Сообщение успешно отправлено.')
         await handle_admin_command(message.from_user.id, message, state)
     else:
@@ -393,13 +393,16 @@ async def process_send(message: Message, state: FSMContext):
 
 # =============FUNCTIN==================
 async def send_mess(ids, message_text):
+    i = 0
     from main import bot
     for user in ids:
         try:
             await bot.send_message(user.id_tg, message_text)
             await logger.info(f"Сообщение отправлено пользователю {user.id_tg}.")
+            i += 1
         except Exception as e:
             await logger.error(f"Не удалось отправить сообщение пользователю {user.id_tg}: {e}")
+    return i
 
 
 # =================================================
