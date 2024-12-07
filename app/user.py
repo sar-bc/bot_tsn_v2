@@ -98,14 +98,20 @@ async def show_ls(callback: CallbackQuery, state: FSMContext):
     await logger.info(f'ID_TG:{callback.from_user.id}|callback_show_ls:{ls}')
     await callback.message.answer("Получение списка счётчиков... ожидайте.")
     ipu = await db.get_ipu(ls)
-    if not ipu:
-        await callback.message.answer(f"❌ На лицевом счете №{ls} не найдены приборы учета❗️")
+    # if not ipu:
+    #     await callback.message.answer(f"❌ На лицевом счете №{ls} не найдены приборы учета❗️")
     users = await db.get_address(ls)
     user_state = await db.get_state(callback.from_user.id)
-    sent_mess = await callback.message.answer(f"Лицевой счет № {ls}\n"
-                                              f"Адрес: {users.address}\n"
-                                              f"Выберите прибор учета из списка",
-                                              reply_markup=await kb.inline_show_ipu(ls, ipu))
+    # sent_mess = await callback.message.answer(f"Лицевой счет № {ls}\n"
+    #                                           f"Адрес: {users.address}\n"
+    #                                           f"Выберите прибор учета из списка" if ipu else "",
+    #                                           reply_markup=await kb.inline_show_ipu(ls, ipu))
+    sent_mess = await callback.message.answer(
+        f"Лицевой счет № {ls}\n"
+        f"Адрес: {users.address}\n"
+        f"{'Выберите прибор учета из списка' if ipu else '❌ На лицевом счете не найдены приборы учета❗️'}",
+        reply_markup=await kb.inline_show_ipu(ls, ipu)
+    )
     user_state.last_message_ids.append(sent_mess.message_id)
     await db.update_state(user_state)
 
@@ -180,7 +186,10 @@ async def add_pokazaniya(callback: CallbackQuery, state: FSMContext):
     # сдесь запрашиваем предпоследнее показание
     last_pokazaniya = await db.get_pokazaniya_last_prev(int(ls), current_date)
     # prev_val = getattr(last_pokazaniya, type_ipu)
-    prev = getattr(last_pokazaniya, type_ipu)
+    if last_pokazaniya is not None:
+        prev = getattr(last_pokazaniya, type_ipu)
+    else:
+        prev = None
     prev_val = f"{prev}" if prev is not None else '-'
     # print(f"prev_val={prev_val}")
     # print(f"last_pokazaniya={last_pokazaniya}")
@@ -188,9 +197,12 @@ async def add_pokazaniya(callback: CallbackQuery, state: FSMContext):
     previous_display = (
         f"Предыдущее: {prev_val} ({last_pokazaniya.date.strftime('%d-%m-%Y')})\n" if (last is not None) and (prev is not None) else ''
     )
-    display_new =(
-        f"Введено: {getattr(last, type_ipu)} (можно изменить)\n" if last.date == current_date else ''
-    )
+    if last is not None:
+        display_new =(
+            f"Введено: {getattr(last, type_ipu)} (можно изменить)\n" if last.date == current_date else ''
+        )
+    else:
+        display_new = ''    
     mess = (f"Прибор учета: {display_type}{ipu_number}\n"
             f"{previous_display}"
             f"{display_new}"
@@ -203,7 +215,12 @@ async def add_pokazaniya(callback: CallbackQuery, state: FSMContext):
     await state.update_data(ls=ls)
     await state.update_data(type_ipu=type_ipu)
     await state.update_data(last_input=previous_value)
-    await state.update_data(last_data=last.date)
+    if last is not None:
+        await state.update_data(last_data=last.date)
+    else:
+        # Обработка случая, когда last равно None
+        await state.update_data(last_data=None)  # Или любое другое значение по умолчанию
+    # await state.update_data(last_data=last.date)
     user_state.last_message_ids.append(sent_mess.message_id)
     await db.update_state(user_state)
 
