@@ -98,6 +98,7 @@ async def show_ls(callback: CallbackQuery, state: FSMContext):
     await logger.info(f'ID_TG:{callback.from_user.id}|callback_show_ls:{ls}')
     await callback.message.answer("Получение списка счётчиков... ожидайте.")
     ipu = await db.get_ipu(ls)
+    print(f"ipu:{ipu}")
     # if not ipu:
     #     await callback.message.answer(f"❌ На лицевом счете №{ls} не найдены приборы учета❗️")
     users = await db.get_address(ls)

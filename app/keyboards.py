@@ -14,6 +14,8 @@ async def inline_ls(ls):
     return keyboard.adjust(1).as_markup()
 
 
+
+
 # async def inline_show_ipu(ls: int, ipu):
 #     keyword = InlineKeyboardBuilder()
 #     type_mapping = {
@@ -21,21 +23,25 @@ async def inline_ls(ls):
 #         'gv': 'ГВС',
 #         'e': 'ЭЛ-ВО'
 #     }
+    
 #     if ipu:
 #         current_date = date.today()
 #         db = DataBase()
 #         last = await db.get_pokazaniya_last_ls(ls)
-#         # print(f"last_keyboard={last}")
+
 #         for i in ipu:
 #             print(f"i={i}")
 #             display_type = type_mapping.get(i.type, i.type)
 #             display_new = " "
-#             if i.type == 'hv' and last.hv is not None and last.date == current_date:
-#                 display_new = ' 🆕'
-#             elif i.type == 'gv' and last.gv is not None and last.date == current_date:
-#                 display_new = ' 🆕'
-#             elif i.type == 'e' and last.e is not None and last.date == current_date:
-#                 display_new = ' 🆕'
+            
+#             if last is not None and last.date == current_date:
+#                 if i.type == 'hv' and last.hv is not None:
+#                     display_new = ' 🆕'
+#                 elif i.type == 'gv' and last.gv is not None:
+#                     display_new = ' 🆕'
+#                 elif i.type == 'e' and last.e is not None:
+#                     display_new = ' 🆕'
+
 #             number_display = f", {i.number}" if len(i.number) > 4 else ' '
 #             location_display = i.location if i.location is not None else ' '
 
@@ -48,6 +54,7 @@ async def inline_ls(ls):
 #         InlineKeyboardButton(text='⬅️ Возврат в начало', callback_data='all_ls_call'),
 #         InlineKeyboardButton(text='❌ Отвязать счет', callback_data=f'del_ls:{ls}')
 #     )
+    
 #     return keyword.as_markup()
 
 async def inline_show_ipu(ls: int, ipu):
@@ -57,7 +64,7 @@ async def inline_show_ipu(ls: int, ipu):
         'gv': 'ГВС',
         'e': 'ЭЛ-ВО'
     }
-    
+
     if ipu:
         current_date = date.today()
         db = DataBase()
@@ -67,7 +74,8 @@ async def inline_show_ipu(ls: int, ipu):
             print(f"i={i}")
             display_type = type_mapping.get(i.type, i.type)
             display_new = " "
-            
+            date_message = ""
+
             if last is not None and last.date == current_date:
                 if i.type == 'hv' and last.hv is not None:
                     display_new = ' 🆕'
@@ -75,6 +83,13 @@ async def inline_show_ipu(ls: int, ipu):
                     display_new = ' 🆕'
                 elif i.type == 'e' and last.e is not None:
                     display_new = ' 🆕'
+
+            if i.data_pov_next is not None:
+                if i.data_pov_next > current_date:
+                    date_message = f" (Следующая дата: {i.data_pov_next})"
+                else:
+                    date_message = " (Счетчик просрочен)"
+                    continue
 
             number_display = f", {i.number}" if len(i.number) > 4 else ' '
             location_display = i.location if i.location is not None else ' '
@@ -88,7 +103,7 @@ async def inline_show_ipu(ls: int, ipu):
         InlineKeyboardButton(text='⬅️ Возврат в начало', callback_data='all_ls_call'),
         InlineKeyboardButton(text='❌ Отвязать счет', callback_data=f'del_ls:{ls}')
     )
-    
+
     return keyword.as_markup()
 
 
