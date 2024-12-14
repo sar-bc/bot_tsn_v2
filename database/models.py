@@ -98,20 +98,20 @@ class Pokazaniya(Base):
 
 
 ####################################
-class PokazaniyaUser(Base):
-    __tablename__ = 'PokazaniyaUser'
+# class PokazaniyaUser(Base):
+#     __tablename__ = 'PokazaniyaUser'
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    ls = Column(Integer, nullable=False)
-    kv = Column(Integer, nullable=False)
-    hv = Column(Integer)
-    gv = Column(Integer)
-    e = Column(Integer)
-    date = Column(Date, nullable=False)
+#     id = Column(Integer, primary_key=True, autoincrement=True)
+#     ls = Column(Integer, nullable=False)
+#     kv = Column(Integer, nullable=False)
+#     hv = Column(Integer)
+#     gv = Column(Integer)
+#     e = Column(Integer)
+#     date = Column(Date, nullable=False)
 
-    def __repr__(self):
-        return (f"<PokazaniyaUser(id={self.id}, ls={self.ls}, kv={self.kv}, "
-                f"hv={self.hv}, gv={self.gv}, e={self.e}, date='{self.date}')>")
+#     def __repr__(self):
+#         return (f"<PokazaniyaUser(id={self.id}, ls={self.ls}, kv={self.kv}, "
+#                 f"hv={self.hv}, gv={self.gv}, e={self.e}, date='{self.date}')>")
 
 
 ####################################
