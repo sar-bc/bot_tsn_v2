@@ -140,7 +140,7 @@ async def import_ipu(callback: CallbackQuery, state: FSMContext):
     await db.delete_messages(user_state)
     await callback.message.answer(f"Прикрепите файл ИПУ формата csv\n"
                                   f"Содержимое файла должно быть в таком формате:\n"
-                                  f"ls;name;number;data_pov_next;location;type\n"
+                                  f"'Лицевой', 'Наименование ПУ', 'Заводской номер', 'Дата следующей поверки', 'Место установки', 'Тип счетчика'\n"
                                   f"Кодировка файла utf-8")
     await state.set_state(ImportIpu.input_file)
 
@@ -180,7 +180,7 @@ async def process_import_ipu(message: Message, state: FSMContext):
         await message.answer("❌ Ошибка формата файла! Попробуйте еще раз...")
         await message.answer(f"Прикрепите файл ИПУ формата csv\n"
                              f"Содержимое файла должно быть в таком формате:\n"
-                             f"ls;name;number;data_pov_next;location;type\n"
+                             f"'Лицевой', 'Наименование ПУ', 'Заводской номер', 'Дата следующей поверки', 'Место установки' ,'Тип счетчика'\n"
                              f"Кодировка файла utf-8")
         await delete_file(file_path)
 
@@ -466,7 +466,7 @@ async def export_ipu_to_csv(file_path):
     try:
         with open(file_path, 'w', newline='', encoding='utf-8') as csv_file:
             writer = csv.writer(csv_file, delimiter=';')
-            writer.writerow(['ls', 'name', 'number', 'data_pov_next', 'location', 'type'])  # Записываем заголовки
+            writer.writerow(['Лицевой', 'Наименование ПУ', 'Заводской номер', 'Дата следующей поверки', 'Место установки' ,'Тип счетчика'])  # Записываем заголовки
             db = DataBase()
             ipus = await db.get_ipu_all()
 
@@ -476,8 +476,8 @@ async def export_ipu_to_csv(file_path):
 
             for ipu in ipus:
                 await logger.info(f"Записываем в файл пу: {ipu.ls}, {ipu.name}, {ipu.number}, {ipu.data_pov_next},"
-                            f"{ipu.location}, {ipu.type}")
-                writer.writerow([ipu.ls, ipu.name, ipu.number, ipu.data_pov_next, ipu.location, ipu.type])  #
+                            f"{ipu.location}, {type_mapping.get(ipu.type)}")
+                writer.writerow([ipu.ls, ipu.name, ipu.number, ipu.data_pov_next, ipu.location, type_mapping.get(ipu.type)])  #
                 # Записываем данные
         await logger.info(f"Данные успешно экспортированы в файл: {file_path}")
     except Exception as e:
@@ -531,10 +531,10 @@ async def add_ipu_from_csv(file_path):
     with open(file_path, 'r', encoding='utf-8') as csv_file:
         rows = csv.reader(csv_file, delimiter=';')
         headers = next(rows)
-
+        print(f"headers={headers}")
         # Проверяем заголовки
-        headers_full = ['ls', 'name', 'number', 'data_pov_next', 'location', 'type', 'flag']
-        headers_partial = ['ls', 'name', 'number', 'data_pov_next', 'location', 'type']
+        headers_full = ['Лицевой', 'Наименование ПУ', 'Заводской номер', 'Дата следующей поверки', 'Место установки', 'Тип счетчика', 'flag']
+        headers_partial = ['Лицевой', 'Наименование ПУ', 'Заводской номер', 'Дата следующей поверки', 'Место установки', 'Тип счетчика']
 
         if headers != headers_full and headers != headers_partial:
             await logger.error("Неверные заголовки файла")
@@ -542,13 +542,15 @@ async def add_ipu_from_csv(file_path):
 
         db = DataBase()
         for row in rows:
+            # print(row)
             ls, name, number, data_pov_next, location, type_ = row[:6]
             flag_value = row[6].strip().lower() == '1' if len(row) > 6 else False  # Проверка флага
-
+            type_key = next((k for k, v in type_mapping.items() if v == type_), None)
             if flag_value:
-                await db.del_ipu(ls, type_)
+                await db.del_ipu(ls, type_key)
             else:
-                await db.add_or_update_ipu(ls, name, number, data_pov_next, location, type_)
+
+                await db.add_or_update_ipu(ls, name, number, data_pov_next, location, type_key)
 
     return True
 
