@@ -207,7 +207,7 @@ async def add_pokazaniya(callback: CallbackQuery, state: FSMContext):
     mess = (f"Прибор учета: {display_type}{ipu_number}\n"
             f"{previous_display}"
             f"{display_new}"
-            f"Введите ниже текущее показание:")
+            f"Введите ниже текущее показание\nВводите показания целым числом:")
     # print(mess)
     sent_mess = await callback.message.answer(mess, reply_markup=await kb.inline_back(ls))
 
