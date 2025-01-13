@@ -86,7 +86,7 @@ async def inline_show_ipu(ls: int, ipu):
 
             if i.data_pov_next is not None:
                 if i.data_pov_next > current_date:
-                    date_message = f" (Следующая дата: {i.data_pov_next})"
+                    date_message = f" (Дата поверки:{i.data_pov_next.strftime('%d.%m.%y')})"
                 else:
                     date_message = " (Счетчик просрочен)"
                     continue
@@ -95,7 +95,7 @@ async def inline_show_ipu(ls: int, ipu):
             location_display = i.location if i.location is not None else ' '
 
             keyword.row(InlineKeyboardButton(
-                text=f"{display_type}{display_new}{number_display} {location_display}",
+                text=f"{display_type}{display_new}{number_display} {location_display} {date_message}",
                 callback_data=f'add_pokazaniya:{i.ls}:{i.type}'
             ))
 
