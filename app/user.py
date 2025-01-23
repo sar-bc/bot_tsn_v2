@@ -244,8 +244,8 @@ async def priem_pokaz(message: Message, state: FSMContext):
     if input_cur.isdigit() and 1 <= len(input_cur) <= 8:
         await logger.info(
             f"ID_TG:{message.from_user.id}|Проверку прошли число и длина. Ввели показания {display_type}:{input_cur}")
-
-        if data.get('last_input') != ' ':
+        
+        if len(data.get('last_input')) != 0:  #if data.get('last_input') != ' ':
             await logger.info(f"ID_TG:{message.from_user.id}|У нас есть предыдущее показание, алгоритм проверки дальше")
 
             if current_date == data.get('last_data'):
@@ -267,6 +267,7 @@ async def priem_pokaz(message: Message, state: FSMContext):
 
                     await logger.info(f"last_pokazaniya: {type_ipu} = {value}")
                     value = value if value is not None else '0'
+                    
                     try:
                         if int(input_cur) >= int(value):
                             await logger.info(f"ID_TG:{message.from_user.id}|Значение в норме записываем в бд")
@@ -299,6 +300,7 @@ async def priem_pokaz(message: Message, state: FSMContext):
 
             else:
                 await logger.info("ДАТЫ НЕ РАВНЫ")
+                
                 try:
                     if int(input_cur) >= int(data.get('last_input')):
                         await logger.info(f"ID_TG:{message.from_user.id}|Значение в норме записываем в бд")
