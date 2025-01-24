@@ -71,9 +71,9 @@ async def inline_show_ipu(ls: int, ipu):
         last = await db.get_pokazaniya_last_ls(ls)
 
         for i in ipu:
-            print(f"i={i}")
+            # print(f"i={i}")
             display_type = type_mapping.get(i.type, i.type)
-            display_new = " "
+            display_new = ""
             date_message = ""
 
             if last is not None and last.date == current_date:
@@ -86,16 +86,16 @@ async def inline_show_ipu(ls: int, ipu):
 
             if i.data_pov_next is not None:
                 if i.data_pov_next > current_date:
-                    date_message = f" (Дата поверки:{i.data_pov_next.strftime('%d.%m.%y')})"
+                    date_message = f"(Поверка:{i.data_pov_next.strftime('%d.%m.%y')})"
                 else:
-                    date_message = " (Счетчик просрочен)"
-                    continue
+                    date_message = "(Счетчик просрочен)"
+                    # continue  # надо чтобы если просрочен то пропускать итерацию и не выводить просроченый счетчик
 
-            number_display = f", {i.number}" if len(i.number) > 4 else ' '
+            number_display = f", {i.number} " if len(i.number) > 4 else ' '
             location_display = i.location if i.location is not None else ' '
 
             keyword.row(InlineKeyboardButton(
-                text=f"{display_type}{display_new}{number_display} {location_display} {date_message}",
+                text=f"{display_type}{display_new}{number_display}{location_display}{date_message}",
                 callback_data=f'add_pokazaniya:{i.ls}:{i.type}'
             ))
 
