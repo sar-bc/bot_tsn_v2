@@ -175,7 +175,7 @@ async def add_pokazaniya(callback: CallbackQuery, state: FSMContext):
     # print(f"ipu={ipu}")
     ipu_number = f", №{ipu.number} {ipu.location if len(ipu.location)>1 else ''}" if len(ipu.number) > 4 else ''
     await logger.info(f"ID_TG:{callback.from_user.id}|get_pokazaniya_last:{last}")
-    previous_value = getattr(last, type_ipu) if last is not None else ' '
+    previous_value = getattr(last, type_ipu) if last is not None else ''  # убрал пробел ' '
     # print(f"previous_value={previous_value}")
     # запрашиваем адрес
     address = await db.get_address(ls)
