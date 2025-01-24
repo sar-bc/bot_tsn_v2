@@ -91,7 +91,7 @@ async def inline_show_ipu(ls: int, ipu):
                     date_message = "(Счетчик просрочен)"
                     # continue  # надо чтобы если просрочен то пропускать итерацию и не выводить просроченый счетчик
 
-            number_display = f", {i.number} " if len(i.number) > 4 else ' '
+            number_display = f", №{i.number} " if len(i.number) > 4 else ' '
             location_display = i.location if i.location is not None else ' '
 
             keyword.row(InlineKeyboardButton(
